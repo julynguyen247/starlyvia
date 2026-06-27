@@ -1,6 +1,5 @@
 package org.example.authservice.service;
 
-import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.example.authservice.dto.*;
 import org.example.authservice.entity.User;
@@ -10,7 +9,6 @@ import org.example.authservice.util.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -59,30 +57,5 @@ public class AuthService {
         return authMapper.toAuthResponse(user,token);
     }
 
-    public TokenValidationResponse validate(String token) {
-        try {
-            Claims claims = jwtUtil.extractClaims(token);
-            return new TokenValidationResponse(
-                    true,
-                    claims.get("userId", String.class),
-                    claims.getSubject(),
-                    claims.get("role", String.class)
-            );
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token");
-        }
-    }
-
-    public String resolveToken(String authorizationHeader, String token) {
-        if (StringUtils.hasText(authorizationHeader) && authorizationHeader.startsWith("Bearer ")) {
-            return authorizationHeader.substring(7);
-        }
-
-        if (StringUtils.hasText(token)) {
-            return token;
-        }
-
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token is required");
-    }
 
 }

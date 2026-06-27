@@ -29,20 +29,4 @@ public class JwtUtil {
                 .signWith(secretKey)
                 .compact();
     }
-    public Claims extractClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-    }
-
-    public boolean isValid(String token) {
-        try {
-            extractClaims(token);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
 }

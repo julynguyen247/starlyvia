@@ -33,7 +33,7 @@ Starlyvia is a Java 25 Spring Boot microservice project. It currently contains a
 | `auth-service` | Authentication API with registration, login, and token validation | `8081` |
 | `postgres` | PostgreSQL database for `auth-service` | `5433` on host |
 
-The gateway module is present, but route configuration has not been added yet.
+The gateway routes `/api/v1/auth/**` traffic to `auth-service` and validates JWTs for protected auth routes.
 
 ## Prerequisites
 
@@ -53,7 +53,33 @@ username: starlyvia
 password: starlyvia
 ```
 
-This repository does not currently include a `docker-compose.yml`. Use this PostgreSQL service as a starting point if you want Docker Compose-managed local infrastructure:
+This repository includes a `docker-compose.yml` for PostgreSQL, `auth-service`, and `api-gateway`.
+
+Start the full stack:
+
+```bash
+docker compose up --build
+```
+
+Start it in the background:
+
+```bash
+docker compose up --build -d
+```
+
+Stop the stack:
+
+```bash
+docker compose down
+```
+
+Remove the PostgreSQL volume as well:
+
+```bash
+docker compose down -v
+```
+
+The Compose file uses this PostgreSQL service:
 
 ```yaml
 services:
@@ -71,18 +97,6 @@ services:
 
 volumes:
   postgres-data:
-```
-
-After adding the compose file, start PostgreSQL:
-
-```bash
-docker compose up -d
-```
-
-Stop PostgreSQL:
-
-```bash
-docker compose down
 ```
 
 ## Running Locally
@@ -108,13 +122,13 @@ cd api-gateway
 Base URL:
 
 ```text
-http://localhost:8081/auth
+http://localhost:8080/api/v1/auth
 ```
 
 Register a user:
 
 ```bash
-curl -X POST http://localhost:8081/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -126,25 +140,12 @@ curl -X POST http://localhost:8081/auth/register \
 Log in:
 
 ```bash
-curl -X POST http://localhost:8081/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
     "password": "password123"
   }'
-```
-
-Validate a token:
-
-```bash
-curl http://localhost:8081/auth/validate \
-  -H "Authorization: Bearer <jwt-token>"
-```
-
-You can also validate by query parameter:
-
-```bash
-curl "http://localhost:8081/auth/validate?token=<jwt-token>"
 ```
 
 ## Configuration
