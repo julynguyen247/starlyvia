@@ -5,6 +5,7 @@ import org.example.apigateway.util.JwtUtil;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -25,7 +26,7 @@ public class JwtValidationGatewayFilterFactory
         return (exchange, chain) -> {
             String path = exchange.getRequest().getURI().getPath();
 
-            if (isPublicAuthPath(path)) {
+            if (isPreflightRequest(exchange.getRequest()) || isPublicAuthPath(path)) {
                 return chain.filter(exchange);
             }
 
@@ -70,5 +71,11 @@ public class JwtValidationGatewayFilterFactory
     private boolean isPublicAuthPath(String path) {
         return path.equals("/api/v1/auth/login")
                 || path.equals("/api/v1/auth/register");
+    }
+
+    private boolean isPreflightRequest(ServerHttpRequest request) {
+        return request.getMethod() == HttpMethod.OPTIONS
+                && request.getHeaders().getOrigin() != null
+                && request.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD) != null;
     }
 }

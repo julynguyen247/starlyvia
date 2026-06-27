@@ -148,6 +148,16 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
   }'
 ```
 
+## Swagger UI
+
+After starting the stack, open:
+
+```text
+http://localhost:8080/swagger-ui.html
+```
+
+The Swagger UI is served through the API gateway and can be used to test the `/api/v1/auth/register` and `/api/v1/auth/login` endpoints.
+
 ## Configuration
 
 Auth service configuration is in:

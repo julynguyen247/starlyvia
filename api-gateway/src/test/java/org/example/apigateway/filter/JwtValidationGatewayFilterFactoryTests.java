@@ -61,6 +61,25 @@ class JwtValidationGatewayFilterFactoryTests {
     }
 
     @Test
+    void allowsCorsPreflightWithoutToken() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.options("/api/v1/auth/me")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
+        );
+        AtomicReference<ServerWebExchange> forwardedExchange = new AtomicReference<>();
+
+        StepVerifier.create(filter().filter(exchange, chainExchange -> {
+                    forwardedExchange.set(chainExchange);
+                    return Mono.empty();
+                }))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isNull();
+        assertThat(forwardedExchange.get()).isNotNull();
+    }
+
+    @Test
     void forwardsProtectedPathWithUserHeadersWhenTokenIsValid() {
         MockServerWebExchange exchange = exchange("/api/v1/auth/me", token());
         AtomicReference<ServerWebExchange> forwardedExchange = new AtomicReference<>();
