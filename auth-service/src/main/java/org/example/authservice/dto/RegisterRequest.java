@@ -3,6 +3,7 @@ package org.example.authservice.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,4 +22,11 @@ public class RegisterRequest {
     @NotBlank
     @Schema(example = "user")
     private String username;
+
+    @Schema(example = "https://example.com/avatar.png")
+    private String avatarUrl;
+
+    @Size(max = 500)
+    @Schema(example = "Hello from Starlyvia")
+    private String bio;
 }

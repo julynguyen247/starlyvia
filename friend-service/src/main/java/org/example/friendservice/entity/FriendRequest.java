@@ -1,4 +1,4 @@
-package org.example.authservice.entity;
+package org.example.friendservice.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,37 +9,37 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name= "users" )
+@Table(
+        name = "friend_requests",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_friend_requests_requester_receiver",
+                        columnNames = {"requester_id", "receiver_id"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class FriendRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
-    private String email;
+    @Column(nullable = false)
+    private UUID requesterId;
 
     @Column(nullable = false)
-    private String password;
+    private UUID receiverId;
 
-    @Column(nullable = false)
-    private String username;
-
-    @Column(nullable = false)
-    private String role;
-
-    @Column()
-    private String avatarUrl;
-
-    @Column(length = 500)
-    private String bio;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private FriendRequestStatus status;
 
     @CreationTimestamp
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp

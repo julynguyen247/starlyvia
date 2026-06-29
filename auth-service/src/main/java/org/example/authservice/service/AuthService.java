@@ -33,6 +33,8 @@ public class AuthService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(DEFAULT_ROLE)
+                .avatarUrl(request.getAvatarUrl())
+                .bio(request.getBio())
                 .createdAt(LocalDateTime.now())
                 .build();
 

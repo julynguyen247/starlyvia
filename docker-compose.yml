@@ -1,7 +1,7 @@
 services:
-  postgres:
+  auth-postgres:
     image: postgres:16-alpine
-    container_name: starlyvia-postgres
+    container_name: starlyvia-auth-postgres
     environment:
       POSTGRES_DB: auth_db
       POSTGRES_USER: starlyvia
@@ -9,9 +9,26 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - auth-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U starlyvia -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  friend-postgres:
+    image: postgres:16-alpine
+    container_name: starlyvia-friend-postgres
+    environment:
+      POSTGRES_DB: friend_db
+      POSTGRES_USER: starlyvia
+      POSTGRES_PASSWORD: starlyvia
+    ports:
+      - "5434:5432"
+    volumes:
+      - friend-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starlyvia -d friend_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,10 +38,10 @@ services:
       context: ./auth-service
     container_name: starlyvia-auth-service
     depends_on:
-      postgres:
+      auth-postgres:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres:5432/auth_db
       SPRING_DATASOURCE_USERNAME: starlyvia
       SPRING_DATASOURCE_PASSWORD: starlyvia
       JWT_SECRET: starlyvia-super-secret-key-starlyvia-super-secret-key
@@ -32,17 +49,36 @@ services:
     ports:
       - "8081:8081"
 
+  friend-service:
+    build:
+      context: ./friend-service
+    container_name: starlyvia-friend-service
+    depends_on:
+      friend-postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://friend-postgres:5432/friend_db
+      SPRING_DATASOURCE_USERNAME: starlyvia
+      SPRING_DATASOURCE_PASSWORD: starlyvia
+    ports:
+      - "8082:8082"
+
   api-gateway:
     build:
       context: ./api-gateway
     container_name: starlyvia-api-gateway
     depends_on:
       - auth-service
+      - friend-service
     environment:
       AUTH_SERVICE_URL: http://auth-service:8081
+      FRIEND_SERVICE_URL: http://friend-service:8082
       JWT_SECRET: starlyvia-super-secret-key-starlyvia-super-secret-key
     ports:
       - "8080:8080"
 
 volumes:
-  postgres-data:
+  auth-postgres-data:
+  friend-postgres-data:

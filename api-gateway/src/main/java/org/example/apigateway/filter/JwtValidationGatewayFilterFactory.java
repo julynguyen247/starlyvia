@@ -49,10 +49,12 @@ public class JwtValidationGatewayFilterFactory
             Claims claims = jwtUtil.extractClaims(token);
 
             String email = claims.getSubject();
+            String userId = claims.get("userId", String.class);
             String role = claims.get("role", String.class);
 
             ServerHttpRequest mutatedRequest = exchange.getRequest()
                     .mutate()
+                    .header("X-User-Id", userId)
                     .header("X-User-Email", email)
                     .header("X-User-Role", role)
                     .build();

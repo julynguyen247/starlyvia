@@ -13,6 +13,15 @@ public class RegisterResponse {
     @Schema(example = "user@example.com")
     private String email;
 
+    @Schema(example = "user")
+    private String username;
+
     @Schema(example = "USER")
     private String role;
+
+    @Schema(example = "https://example.com/avatar.png")
+    private String avatarUrl;
+
+    @Schema(example = "Hello from Starlyvia")
+    private String bio;
 }

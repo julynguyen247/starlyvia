@@ -12,13 +12,19 @@ public class AuthResponseMapper {
                 token,
                 user.getId().toString(),
                 user.getEmail(),
-                user.getRole()
+                user.getUsername(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getBio()
         );
     }
 
     public RegisterResponse toRegisterResponse(User user) {
         return new RegisterResponse(user.getId().toString(),
                 user.getEmail(),
-                user.getRole());
+                user.getUsername(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getBio());
     }
 }

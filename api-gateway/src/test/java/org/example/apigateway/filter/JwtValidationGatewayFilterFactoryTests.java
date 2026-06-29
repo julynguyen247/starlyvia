@@ -92,6 +92,8 @@ class JwtValidationGatewayFilterFactoryTests {
 
         assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Email"))
                 .isEqualTo("user@example.com");
+        assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Id"))
+                .isEqualTo("7f4b0f70-2e72-4d43-9bb8-9bf61ab56319");
         assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Role"))
                 .isEqualTo("USER");
     }
@@ -111,6 +113,7 @@ class JwtValidationGatewayFilterFactoryTests {
     private String token() {
         return Jwts.builder()
                 .subject("user@example.com")
+                .claim("userId", "7f4b0f70-2e72-4d43-9bb8-9bf61ab56319")
                 .claim("role", "USER")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 60_000))
