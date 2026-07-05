@@ -1,6 +1,6 @@
 # Starlyvia
 
-Starlyvia is a Java 25 Spring Boot microservice project. It contains authentication and friendship services backed by PostgreSQL, plus an API gateway that fronts the backend services.
+Starlyvia is a Java 25 Spring Boot microservice project. It contains authentication and couple services backed by PostgreSQL, plus an API gateway that fronts the backend services.
 
 ## Tech Stack
 
@@ -23,7 +23,7 @@ Starlyvia is a Java 25 Spring Boot microservice project. It contains authenticat
 |-- auth-service/
 |   |-- pom.xml
 |   `-- src/
-`-- friend-service/
+`-- couple-service/
     |-- pom.xml
     `-- src/
 ```
@@ -34,11 +34,11 @@ Starlyvia is a Java 25 Spring Boot microservice project. It contains authenticat
 | --- | --- | --- |
 | `api-gateway` | Spring Cloud Gateway application | `8080` |
 | `auth-service` | Authentication API with registration, login, and token validation | `8081` |
-| `friend-service` | Friend request and friendship API | `8082` |
+| `couple-service` | Couple request and couple API | `8082` |
 | `auth-postgres` | PostgreSQL database for `auth-service` | `5433` on host |
-| `friend-postgres` | PostgreSQL database for `friend-service` | `5434` on host |
+| `couple-postgres` | PostgreSQL database for `couple-service` | `5434` on host |
 
-The gateway routes `/api/v1/auth/**` traffic to `auth-service`, routes `/api/v1/friends/**` traffic to `friend-service`, and validates JWTs for protected routes. `auth-service` owns the `users` table; `friend-service` stores only user UUIDs from JWT claims in `friend_requests` and `friendships`.
+The gateway routes `/api/v1/auth/**` traffic to `auth-service`, routes `/api/v1/couples/**` traffic to `couple-service`, and validates JWTs for protected routes. `auth-service` owns the `users` table; `couple-service` stores only user UUIDs from JWT claims in `couple_requests` and `couples`.
 
 ## Prerequisites
 
@@ -58,15 +58,15 @@ username: starlyvia
 password: starlyvia
 ```
 
-The friend service is configured to connect to:
+The couple service is configured to connect to:
 
 ```text
-jdbc:postgresql://localhost:5434/friend_db
+jdbc:postgresql://localhost:5434/couple_db
 username: starlyvia
 password: starlyvia
 ```
 
-This repository includes a `docker-compose.yml` for separate auth and friend PostgreSQL containers, `auth-service`, `friend-service`, and `api-gateway`.
+This repository includes a `docker-compose.yml` for separate auth and couple PostgreSQL containers, `auth-service`, `couple-service`, and `api-gateway`.
 
 Start the full stack:
 
@@ -106,11 +106,11 @@ services:
     ports:
       - "5433:5432"
 
-  friend-postgres:
+  couple-postgres:
     image: postgres:16-alpine
-    container_name: starlyvia-friend-postgres
+    container_name: starlyvia-couple-postgres
     environment:
-      POSTGRES_DB: friend_db
+      POSTGRES_DB: couple_db
       POSTGRES_USER: starlyvia
       POSTGRES_PASSWORD: starlyvia
     ports:
@@ -118,7 +118,7 @@ services:
 
 volumes:
   auth-postgres-data:
-  friend-postgres-data:
+  couple-postgres-data:
 ```
 
 ## Running Locally
@@ -139,10 +139,10 @@ cd api-gateway
 ./mvnw spring-boot:run
 ```
 
-Run the friend service:
+Run the couple service:
 
 ```bash
-cd friend-service
+cd couple-service
 ./mvnw spring-boot:run
 ```
 
@@ -177,34 +177,34 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 }'
 ```
 
-## Friend API
+## Couple API
 
 Base URL:
 
 ```text
-http://localhost:8080/api/v1/friends
+http://localhost:8080/api/v1/couples
 ```
 
-Send a friend request:
+Send a couple request:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/friends/requests \
+curl -X POST http://localhost:8080/api/v1/couples/requests \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"receiverId":"<receiver-user-id>"}'
 ```
 
-Accept a friend request:
+Accept a couple request:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/friends/requests/<request-id>/accept \
+curl -X POST http://localhost:8080/api/v1/couples/requests/<request-id>/accept \
   -H "Authorization: Bearer <token>"
 ```
 
-List current user's friendships:
+List current user's couple:
 
 ```bash
-curl http://localhost:8080/api/v1/friends \
+curl http://localhost:8080/api/v1/couples \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -226,10 +226,10 @@ Auth service configuration is in:
 auth-service/src/main/resources/application.yaml
 ```
 
-Friend service configuration is in:
+Couple service configuration is in:
 
 ```text
-friend-service/src/main/resources/application.yaml
+couple-service/src/main/resources/application.yaml
 ```
 
 Important properties:
@@ -267,14 +267,14 @@ cd api-gateway
 ./mvnw test
 ```
 
-Run tests for the friend service:
+Run tests for the couple service:
 
 ```bash
-cd friend-service
+cd couple-service
 ./mvnw test
 ```
 
-The auth and friend service test profiles use in-memory H2 databases from their `src/test/resources/application-test.yaml` files.
+The auth and couple service test profiles use in-memory H2 databases from their `src/test/resources/application-test.yaml` files.
 
 ## Build
 
@@ -291,7 +291,7 @@ cd api-gateway
 ```
 
 ```bash
-cd friend-service
+cd couple-service
 ./mvnw clean package
 ```
 
