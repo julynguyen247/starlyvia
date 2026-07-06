@@ -19,7 +19,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Builder
-public class DatePlan {
+public class Plan {
 
     @GeneratedValue(strategy = GenerationType.UUID)
     @Id
@@ -55,7 +55,7 @@ public class DatePlan {
     private UUID createdBy;
 
     @OneToMany(
-        mappedBy = "datePlan",
+        mappedBy = "plan",
         cascade= CascadeType.ALL,
             orphanRemoval = true
     )

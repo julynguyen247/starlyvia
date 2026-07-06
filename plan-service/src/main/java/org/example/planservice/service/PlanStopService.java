@@ -3,11 +3,11 @@ package org.example.planservice.service;
 import lombok.RequiredArgsConstructor;
 import org.example.planservice.dto.PlanStopRequest;
 import org.example.planservice.dto.PlanStopResponse;
-import org.example.planservice.dto.UpdatePlanStopRequest;
-import org.example.planservice.entity.DatePlan;
+import org.example.planservice.dto.UpplanStopRequest;
+import org.example.planservice.entity.Plan;
 import org.example.planservice.entity.PlanStop;
 import org.example.planservice.mapper.PlanStopMapper;
-import org.example.planservice.repository.DatePlanRepository;
+import org.example.planservice.repository.PlanRepository;
 import org.example.planservice.repository.PlanStopRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,16 +23,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PlanStopService {
     private final PlanStopRepository planStopRepository;
-    private final DatePlanRepository datePlanRepository;
+    private final PlanRepository planRepository;
     private final PlanStopMapper planStopMapper;
-    private final DatePlanAccessPolicy datePlanAccessPolicy;
+    private final PlanAccessPolicy planAccessPolicy;
 
     @Transactional
-    public PlanStopResponse create(UUID currentUserId, UUID datePlanId, PlanStopRequest request) {
-        DatePlan datePlan = findDatePlan(datePlanId);
-        datePlanAccessPolicy.assertCanEdit(datePlan, currentUserId);
-        PlanStop planStop = planStopMapper.toEntity(request, datePlan);
-        datePlan.setUpdatedAt(LocalDateTime.now());
+    public PlanStopResponse create(UUID currentUserId, UUID planId, PlanStopRequest request) {
+        Plan plan = findPlan(planId);
+        planAccessPolicy.assertCanEdit(plan, currentUserId);
+        PlanStop planStop = planStopMapper.toEntity(request, plan);
+        plan.setUpdatedAt(LocalDateTime.now());
 
         return planStopMapper.toResponse(planStopRepository.save(planStop));
     }
@@ -40,16 +40,16 @@ public class PlanStopService {
     @Transactional(readOnly = true)
     public PlanStopResponse getById(UUID currentUserId, UUID id) {
         PlanStop planStop = findPlanStop(id);
-        datePlanAccessPolicy.assertCanView(planStop.getDatePlan(), currentUserId);
+        planAccessPolicy.assertCanView(planStop.getPlan(), currentUserId);
         return planStopMapper.toResponse(planStop);
     }
 
     @Transactional(readOnly = true)
-    public List<PlanStopResponse> getByDatePlanId(UUID currentUserId, UUID datePlanId) {
-        DatePlan datePlan = findDatePlan(datePlanId);
-        datePlanAccessPolicy.assertCanView(datePlan, currentUserId);
+    public List<PlanStopResponse> getByPlanId(UUID currentUserId, UUID planId) {
+        Plan plan = findPlan(planId);
+        planAccessPolicy.assertCanView(plan, currentUserId);
 
-        return planStopRepository.findByDatePlanId(datePlanId).stream()
+        return planStopRepository.findByPlanId(planId).stream()
                 .sorted(Comparator.comparing(
                         PlanStop::getOrderIndex,
                         Comparator.nullsLast(Integer::compareTo)
@@ -59,11 +59,11 @@ public class PlanStopService {
     }
 
     @Transactional
-    public PlanStopResponse update(UUID currentUserId, UUID id, UpdatePlanStopRequest request) {
+    public PlanStopResponse update(UUID currentUserId, UUID id, UpplanStopRequest request) {
         PlanStop planStop = findPlanStop(id);
-        datePlanAccessPolicy.assertCanEdit(planStop.getDatePlan(), currentUserId);
+        planAccessPolicy.assertCanEdit(planStop.getPlan(), currentUserId);
         planStopMapper.updateEntity(planStop, request);
-        planStop.getDatePlan().setUpdatedAt(LocalDateTime.now());
+        planStop.getPlan().setUpdatedAt(LocalDateTime.now());
 
         return planStopMapper.toResponse(planStopRepository.save(planStop));
     }
@@ -71,13 +71,13 @@ public class PlanStopService {
     @Transactional
     public void delete(UUID currentUserId, UUID id) {
         PlanStop planStop = findPlanStop(id);
-        datePlanAccessPolicy.assertCanEdit(planStop.getDatePlan(), currentUserId);
-        planStop.getDatePlan().setUpdatedAt(LocalDateTime.now());
+        planAccessPolicy.assertCanEdit(planStop.getPlan(), currentUserId);
+        planStop.getPlan().setUpdatedAt(LocalDateTime.now());
         planStopRepository.delete(planStop);
     }
 
-    private DatePlan findDatePlan(UUID id) {
-        return datePlanRepository.findById(id)
+    private Plan findPlan(UUID id) {
+        return planRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Date plan not found"));
     }
 

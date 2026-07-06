@@ -53,10 +53,10 @@ spring:
                 - Path=/api/v1/groups/**
               filters:
                 - JwtValidation
-            - id: plan-service-date-plans
+            - id: plan-service-plans
               uri: ${plan.service.url}
               predicates:
-                - Path=/api/v1/date-plans/**
+                - Path=/api/v1/plans/**
               filters:
                 - JwtValidation
             - id: plan-service-plan-stops

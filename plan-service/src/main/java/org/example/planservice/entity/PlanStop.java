@@ -37,6 +37,6 @@ public class PlanStop {
     private String note;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "date_plan_id", nullable = false)
-    private DatePlan datePlan;
+    @JoinColumn(name = "plan_id", nullable = false)
+    private Plan plan;
 }

@@ -2,14 +2,14 @@ package org.example.planservice.mapper;
 
 import org.example.planservice.dto.PlanStopRequest;
 import org.example.planservice.dto.PlanStopResponse;
-import org.example.planservice.dto.UpdatePlanStopRequest;
-import org.example.planservice.entity.DatePlan;
+import org.example.planservice.dto.UpplanStopRequest;
+import org.example.planservice.entity.Plan;
 import org.example.planservice.entity.PlanStop;
 import org.springframework.stereotype.Component;
 
 @Component
 public class PlanStopMapper {
-    public PlanStop toEntity(PlanStopRequest request, DatePlan datePlan) {
+    public PlanStop toEntity(PlanStopRequest request, Plan plan) {
         return PlanStop.builder()
                 .name(request.getName())
                 .address(request.getAddress())
@@ -19,11 +19,11 @@ public class PlanStopMapper {
                 .arrivalTime(request.getArrivalTime())
                 .departureTime(request.getDepartureTime())
                 .note(request.getNote())
-                .datePlan(datePlan)
+                .plan(plan)
                 .build();
     }
 
-    public void updateEntity(PlanStop planStop, UpdatePlanStopRequest request) {
+    public void updateEntity(PlanStop planStop, UpplanStopRequest request) {
         planStop.setName(request.getName());
         planStop.setAddress(request.getAddress());
         planStop.setLatitude(request.getLatitude());
@@ -37,7 +37,7 @@ public class PlanStopMapper {
     public PlanStopResponse toResponse(PlanStop planStop) {
         return new PlanStopResponse(
                 planStop.getId(),
-                planStop.getDatePlan().getId(),
+                planStop.getPlan().getId(),
                 planStop.getName(),
                 planStop.getAddress(),
                 planStop.getLatitude(),

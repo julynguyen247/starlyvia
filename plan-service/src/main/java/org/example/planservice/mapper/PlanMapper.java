@@ -1,12 +1,12 @@
 package org.example.planservice.mapper;
 
-import org.example.planservice.dto.CreateDatePlanRequest;
-import org.example.planservice.dto.DatePlanResponse;
+import org.example.planservice.dto.CreatePlanRequest;
+import org.example.planservice.dto.PlanResponse;
 import org.example.planservice.dto.PlanStopRequest;
 import org.example.planservice.dto.PlanStopResponse;
 import org.example.planservice.dto.PlanTimelineSegmentResponse;
-import org.example.planservice.dto.UpdateDatePlanRequest;
-import org.example.planservice.entity.DatePlan;
+import org.example.planservice.dto.UpplanRequest;
+import org.example.planservice.entity.Plan;
 import org.example.planservice.entity.PlanStop;
 import org.example.planservice.enums.PlanStatus;
 import org.springframework.stereotype.Component;
@@ -18,10 +18,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
-public class DatePlanMapper {
-    public DatePlan toEntity(CreateDatePlanRequest request, UUID createdBy) {
+public class PlanMapper {
+    public Plan toEntity(CreatePlanRequest request, UUID createdBy) {
         LocalDateTime now = LocalDateTime.now();
-        DatePlan datePlan = DatePlan.builder()
+        Plan plan = Plan.builder()
                 .planName(request.getPlanName())
                 .planDescription(request.getPlanDescription())
                 .planStartDate(request.getPlanStartDate())
@@ -36,32 +36,32 @@ public class DatePlanMapper {
                 .stops(new ArrayList<>())
                 .build();
 
-        addStops(datePlan, request.getStops());
-        return datePlan;
+        addStops(plan, request.getStops());
+        return plan;
     }
 
-    public void updateEntity(DatePlan datePlan, UpdateDatePlanRequest request) {
-        datePlan.setPlanName(request.getPlanName());
-        datePlan.setPlanDescription(request.getPlanDescription());
-        datePlan.setPlanStartDate(request.getPlanStartDate());
-        datePlan.setPlanEndDate(request.getPlanEndDate());
-        datePlan.setPlanStartTime(request.getPlanStartTime());
-        datePlan.setPlanEndTime(request.getPlanEndTime());
-        datePlan.setStatus(request.getStatus());
-        datePlan.setUpdatedAt(LocalDateTime.now());
+    public void updateEntity(Plan plan, UpplanRequest request) {
+        plan.setPlanName(request.getPlanName());
+        plan.setPlanDescription(request.getPlanDescription());
+        plan.setPlanStartDate(request.getPlanStartDate());
+        plan.setPlanEndDate(request.getPlanEndDate());
+        plan.setPlanStartTime(request.getPlanStartTime());
+        plan.setPlanEndTime(request.getPlanEndTime());
+        plan.setStatus(request.getStatus());
+        plan.setUpdatedAt(LocalDateTime.now());
 
-        if (datePlan.getStops() == null) {
-            datePlan.setStops(new ArrayList<>());
+        if (plan.getStops() == null) {
+            plan.setStops(new ArrayList<>());
         } else {
-            datePlan.getStops().clear();
+            plan.getStops().clear();
         }
-        addStops(datePlan, request.getStops());
+        addStops(plan, request.getStops());
     }
 
-    public DatePlanResponse toResponse(DatePlan datePlan) {
-        List<PlanStopResponse> stops = datePlan.getStops() == null
+    public PlanResponse toResponse(Plan plan) {
+        List<PlanStopResponse> stops = plan.getStops() == null
                 ? List.of()
-                : datePlan.getStops().stream()
+                : plan.getStops().stream()
                 .sorted(Comparator.comparing(
                         PlanStop::getOrderIndex,
                         Comparator.nullsLast(Integer::compareTo)
@@ -69,19 +69,19 @@ public class DatePlanMapper {
                 .map(this::toResponse)
                 .toList();
 
-        return new DatePlanResponse(
-                datePlan.getId(),
-                datePlan.getPlanName(),
-                datePlan.getPlanDescription(),
-                datePlan.getPlanStartDate(),
-                datePlan.getPlanEndDate(),
-                datePlan.getPlanStartTime(),
-                datePlan.getPlanEndTime(),
-                datePlan.getGroupId(),
-                datePlan.getStatus(),
-                datePlan.getCreatedBy(),
-                datePlan.getCreatedAt(),
-                datePlan.getUpdatedAt(),
+        return new PlanResponse(
+                plan.getId(),
+                plan.getPlanName(),
+                plan.getPlanDescription(),
+                plan.getPlanStartDate(),
+                plan.getPlanEndDate(),
+                plan.getPlanStartTime(),
+                plan.getPlanEndTime(),
+                plan.getGroupId(),
+                plan.getStatus(),
+                plan.getCreatedBy(),
+                plan.getCreatedAt(),
+                plan.getUpdatedAt(),
                 stops,
                 buildTimeline(stops)
         );
@@ -110,17 +110,17 @@ public class DatePlanMapper {
         return timeline;
     }
 
-    private void addStops(DatePlan datePlan, List<PlanStopRequest> stops) {
+    private void addStops(Plan plan, List<PlanStopRequest> stops) {
         if (stops == null) {
             return;
         }
 
         stops.stream()
-                .map(stopRequest -> toEntity(stopRequest, datePlan))
-                .forEach(datePlan.getStops()::add);
+                .map(stopRequest -> toEntity(stopRequest, plan))
+                .forEach(plan.getStops()::add);
     }
 
-    private PlanStop toEntity(PlanStopRequest request, DatePlan datePlan) {
+    private PlanStop toEntity(PlanStopRequest request, Plan plan) {
         return PlanStop.builder()
                 .name(request.getName())
                 .address(request.getAddress())
@@ -130,14 +130,14 @@ public class DatePlanMapper {
                 .arrivalTime(request.getArrivalTime())
                 .departureTime(request.getDepartureTime())
                 .note(request.getNote())
-                .datePlan(datePlan)
+                .plan(plan)
                 .build();
     }
 
     private PlanStopResponse toResponse(PlanStop stop) {
         return new PlanStopResponse(
                 stop.getId(),
-                stop.getDatePlan().getId(),
+                stop.getPlan().getId(),
                 stop.getName(),
                 stop.getAddress(),
                 stop.getLatitude(),

@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.planservice.dto.PlanStopRequest;
 import org.example.planservice.dto.PlanStopResponse;
-import org.example.planservice.dto.UpdatePlanStopRequest;
+import org.example.planservice.dto.UpplanStopRequest;
 import org.example.planservice.service.PlanStopService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,22 +25,22 @@ import java.util.UUID;
 public class PlanStopController {
     private final PlanStopService planStopService;
 
-    @PostMapping("/api/v1/date-plans/{datePlanId}/stops")
+    @PostMapping("/api/v1/plans/{planId}/stops")
     @ResponseStatus(HttpStatus.CREATED)
     public PlanStopResponse create(
             @RequestHeader("X-User-Id") UUID currentUserId,
-            @PathVariable UUID datePlanId,
+            @PathVariable UUID planId,
             @Valid @RequestBody PlanStopRequest request
     ) {
-        return planStopService.create(currentUserId, datePlanId, request);
+        return planStopService.create(currentUserId, planId, request);
     }
 
-    @GetMapping("/api/v1/date-plans/{datePlanId}/stops")
-    public List<PlanStopResponse> getByDatePlanId(
+    @GetMapping("/api/v1/plans/{planId}/stops")
+    public List<PlanStopResponse> getByPlanId(
             @RequestHeader("X-User-Id") UUID currentUserId,
-            @PathVariable UUID datePlanId
+            @PathVariable UUID planId
     ) {
-        return planStopService.getByDatePlanId(currentUserId, datePlanId);
+        return planStopService.getByPlanId(currentUserId, planId);
     }
 
     @GetMapping("/api/v1/plan-stops/{id}")
@@ -55,7 +55,7 @@ public class PlanStopController {
     public PlanStopResponse update(
             @RequestHeader("X-User-Id") UUID currentUserId,
             @PathVariable UUID id,
-            @Valid @RequestBody UpdatePlanStopRequest request
+            @Valid @RequestBody UpplanStopRequest request
     ) {
         return planStopService.update(currentUserId, id, request);
     }

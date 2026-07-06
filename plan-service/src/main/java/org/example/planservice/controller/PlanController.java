@@ -2,10 +2,10 @@ package org.example.planservice.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.example.planservice.dto.CreateDatePlanRequest;
-import org.example.planservice.dto.DatePlanResponse;
-import org.example.planservice.dto.UpdateDatePlanRequest;
-import org.example.planservice.service.DatePlanService;
+import org.example.planservice.dto.CreatePlanRequest;
+import org.example.planservice.dto.PlanResponse;
+import org.example.planservice.dto.UpplanRequest;
+import org.example.planservice.service.PlanService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,43 +22,43 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/date-plans")
+@RequestMapping("/api/v1/plans")
 @RequiredArgsConstructor
-public class DatePlanController {
-    private final DatePlanService datePlanService;
+public class PlanController {
+    private final PlanService planService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public DatePlanResponse create(
+    public PlanResponse create(
             @RequestHeader("X-User-Id") UUID currentUserId,
-            @Valid @RequestBody CreateDatePlanRequest request
+            @Valid @RequestBody CreatePlanRequest request
     ) {
-        return datePlanService.create(currentUserId, request);
+        return planService.create(currentUserId, request);
     }
 
     @GetMapping("/{id}")
-    public DatePlanResponse getById(
+    public PlanResponse getById(
             @RequestHeader("X-User-Id") UUID currentUserId,
             @PathVariable UUID id
     ) {
-        return datePlanService.getById(currentUserId, id);
+        return planService.getById(currentUserId, id);
     }
 
     @GetMapping("/groups/{groupId}")
-    public List<DatePlanResponse> getByGroupId(
+    public List<PlanResponse> getByGroupId(
             @RequestHeader("X-User-Id") UUID currentUserId,
             @PathVariable UUID groupId
     ) {
-        return datePlanService.getByGroupId(currentUserId, groupId);
+        return planService.getByGroupId(currentUserId, groupId);
     }
 
     @PutMapping("/{id}")
-    public DatePlanResponse update(
+    public PlanResponse update(
             @RequestHeader("X-User-Id") UUID currentUserId,
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateDatePlanRequest request
+            @Valid @RequestBody UpplanRequest request
     ) {
-        return datePlanService.update(currentUserId, id, request);
+        return planService.update(currentUserId, id, request);
     }
 
     @DeleteMapping("/{id}")
@@ -67,6 +67,6 @@ public class DatePlanController {
             @RequestHeader("X-User-Id") UUID currentUserId,
             @PathVariable UUID id
     ) {
-        datePlanService.delete(currentUserId, id);
+        planService.delete(currentUserId, id);
     }
 }

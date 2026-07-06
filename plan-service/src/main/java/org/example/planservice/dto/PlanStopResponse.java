@@ -10,7 +10,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class PlanStopResponse {
     private UUID id;
-    private UUID datePlanId;
+    private UUID planId;
     private String name;
     private String address;
     private Double latitude;

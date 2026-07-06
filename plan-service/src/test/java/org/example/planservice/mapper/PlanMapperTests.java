@@ -1,10 +1,10 @@
 package org.example.planservice.mapper;
 
-import org.example.planservice.dto.CreateDatePlanRequest;
-import org.example.planservice.dto.DatePlanResponse;
+import org.example.planservice.dto.CreatePlanRequest;
+import org.example.planservice.dto.PlanResponse;
 import org.example.planservice.dto.PlanStopRequest;
 import org.example.planservice.dto.PlanTimelineSegmentResponse;
-import org.example.planservice.entity.DatePlan;
+import org.example.planservice.entity.Plan;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -14,13 +14,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class DatePlanMapperTests {
+class PlanMapperTests {
 
-    private final DatePlanMapper mapper = new DatePlanMapper();
+    private final PlanMapper mapper = new PlanMapper();
 
     @Test
     void toResponseBuildsTimelineBetweenSortedStops() {
-        CreateDatePlanRequest request = new CreateDatePlanRequest();
+        CreatePlanRequest request = new CreatePlanRequest();
         request.setPlanName("Anniversary");
         request.setPlanDescription("Dinner and walk");
         request.setPlanStartDate(LocalDate.of(2026, 7, 6));
@@ -34,9 +34,9 @@ class DatePlanMapperTests {
                 stop("Walk", 3, LocalTime.of(20, 45), LocalTime.of(21, 30))
         ));
 
-        DatePlan datePlan = mapper.toEntity(request, UUID.randomUUID());
+        Plan plan = mapper.toEntity(request, UUID.randomUUID());
 
-        DatePlanResponse response = mapper.toResponse(datePlan);
+        PlanResponse response = mapper.toResponse(plan);
 
         assertThat(response.getStops())
                 .extracting("name")

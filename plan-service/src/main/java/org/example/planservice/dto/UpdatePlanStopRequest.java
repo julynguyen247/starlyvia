@@ -9,7 +9,7 @@ import java.time.LocalTime;
 
 @Getter
 @Setter
-public class UpdatePlanStopRequest {
+public class UpplanStopRequest {
     @NotBlank
     private String name;
 
