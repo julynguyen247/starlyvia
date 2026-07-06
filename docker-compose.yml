@@ -34,36 +34,36 @@ services:
       timeout: 5s
       retries: 5
 
-  couple-postgres:
+  group-postgres:
     image: postgres:16-alpine
-    container_name: starlyvia-couple-postgres
+    container_name: starlyvia-group-postgres
     environment:
-      POSTGRES_DB: couple_db
+      POSTGRES_DB: group_db
       POSTGRES_USER: starlyvia
       POSTGRES_PASSWORD: starlyvia
     ports:
       - "5434:5432"
     volumes:
-      - couple-postgres-data:/var/lib/postgresql/data
+      - group-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U starlyvia -d couple_db"]
+      test: ["CMD-SHELL", "pg_isready -U starlyvia -d group_db"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  dateplan-postgres:
+  plan-postgres:
     image: postgres:16-alpine
-    container_name: starlyvia-dateplan-postgres
+    container_name: starlyvia-plan-postgres
     environment:
-      POSTGRES_DB: dateplan_db
+      POSTGRES_DB: plan_db
       POSTGRES_USER: starlyvia
       POSTGRES_PASSWORD: starlyvia
     ports:
       - "5435:5432"
     volumes:
-      - dateplan-postgres-data:/var/lib/postgresql/data
+      - plan-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U starlyvia -d dateplan_db"]
+      test: ["CMD-SHELL", "pg_isready -U starlyvia -d plan_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -89,41 +89,44 @@ services:
       - "8081:8081"
       - "9091:9091"
 
-  couple-service:
+  group-service:
     build:
-      context: ./couple-service
-    container_name: starlyvia-couple-service
+      context: ./group-service
+    container_name: starlyvia-group-service
     depends_on:
       kafka:
         condition: service_started
-      couple-postgres:
+      group-postgres:
         condition: service_healthy
       auth-service:
         condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://couple-postgres:5432/couple_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://group-postgres:5432/group_db
       SPRING_DATASOURCE_USERNAME: starlyvia
       SPRING_DATASOURCE_PASSWORD: starlyvia
       AUTH_GRPC_HOST: auth-service
       AUTH_GRPC_PORT: 9091
+      GRPC_SERVER_PORT: 9092
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8082:8082"
+      - "9092:9092"
 
-  dateplan-service:
+  plan-service:
     build:
-      context: ./dateplan-service
-    container_name: starlyvia-dateplan-service
+      context: ./plan-service
+    container_name: starlyvia-plan-service
     depends_on:
-      kafka:
-        condition: service_started
-      dateplan-postgres:
+      plan-postgres:
         condition: service_healthy
+      group-service:
+        condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://dateplan-postgres:5432/dateplan_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://plan-postgres:5432/plan_db
       SPRING_DATASOURCE_USERNAME: starlyvia
       SPRING_DATASOURCE_PASSWORD: starlyvia
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_GRPC_HOST: group-service
+      GROUP_GRPC_PORT: 9092
     ports:
       - "8083:8083"
 
@@ -133,12 +136,12 @@ services:
     container_name: starlyvia-api-gateway
     depends_on:
       - auth-service
-      - couple-service
-      - dateplan-service
+      - group-service
+      - plan-service
     environment:
       AUTH_SERVICE_URL: http://auth-service:8081
-      COUPLE_SERVICE_URL: http://couple-service:8082
-      DATEPLAN_SERVICE_URL: http://dateplan-service:8083
+      GROUP_SERVICE_URL: http://group-service:8082
+      PLAN_SERVICE_URL: http://plan-service:8083
       JWT_SECRET: starlyvia-super-secret-key-starlyvia-super-secret-key
     ports:
       - "8080:8080"
@@ -146,5 +149,5 @@ services:
 volumes:
   kafka-data:
   auth-postgres-data:
-  couple-postgres-data:
-  dateplan-postgres-data:
+  group-postgres-data:
+  plan-postgres-data:

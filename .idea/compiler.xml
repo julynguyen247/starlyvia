@@ -2,21 +2,24 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <annotationProcessing>
-      <profile name="Annotation profile for dateplan-service" enabled="true">
+      <profile name="Annotation profile for auth-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
         </processorPath>
         <module name="api-gateway" />
-        <module name="dateplan-service" />
+        <module name="group-service" />
         <module name="auth-service" />
-        <module name="couple-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="couple-service" target="25" />
+      <module name="plan-service" target="25" />
       <module name="friend-service" target="25" />
+      <module name="group-service" target="25" />
       <module name="user-service" target="25" />
     </bytecodeTargetLevel>
   </component>
@@ -24,8 +27,8 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="api-gateway" options="-parameters" />
       <module name="auth-service" options="-parameters" />
-      <module name="couple-service" options="-parameters" />
-      <module name="dateplan-service" options="-parameters" />
+      <module name="plan-service" options="-parameters" />
+      <module name="group-service" options="-parameters" />
       <module name="user-service" options="-parameters" />
     </option>
   </component>

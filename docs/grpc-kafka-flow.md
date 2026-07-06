@@ -4,21 +4,21 @@
 flowchart LR
     Client[Client / API Gateway]
     Auth[auth-service]
-    Couple[couple-service]
+    Group[group-service]
     AuthDb[(auth_db)]
-    CoupleDb[(couple_db)]
+    GroupDb[(group_db)]
     Kafka[(Kafka)]
-    Consumers[Future consumers<br/>notification-service<br/>dateplan-service]
+    Consumers[Future consumers<br/>notification-service<br/>plan-service]
 
     Client -- REST register / login --> Auth
     Auth -- write user --> AuthDb
     Auth -- Kafka event<br/>user.registered --> Kafka
 
-    Client -- REST couple request --> Couple
-    Couple -- gRPC UserExists(receiverId) --> Auth
-    Auth -- exists / not exists --> Couple
-    Couple -- write request / couple --> CoupleDb
-    Couple -- Kafka events<br/>couple.requested<br/>couple.accepted<br/>couple.rejected<br/>couple.removed --> Kafka
+    Client -- REST create group / invite member --> Group
+    Group -- gRPC UserExists(inviteeId) --> Auth
+    Auth -- exists / not exists --> Group
+    Group -- write group / member / invitation --> GroupDb
+    Group -- Kafka events<br/>group.created<br/>group.invitation.created<br/>group.member.added<br/>group.member.removed --> Kafka
 
     Kafka -- async consume --> Consumers
 ```

@@ -1,0 +1,44 @@
+server:
+  port: 8082
+
+grpc:
+  server:
+    port: ${GRPC_SERVER_PORT:9092}
+
+spring:
+  application:
+    name: group-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5434/group_db
+    username: starlyvia
+    password: starlyvia
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+auth:
+  grpc:
+    host: ${AUTH_GRPC_HOST:localhost}
+    port: ${AUTH_GRPC_PORT:9091}
+
+app:
+  kafka:
+    enabled: ${APP_KAFKA_ENABLED:true}
+    topics:
+      group-created: group.created
+      group-invitation-created: group.invitation.created
+      group-member-added: group.member.added
+      group-member-removed: group.member.removed

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package starlyvia.group.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "GroupQueryServiceProto";
+option java_package = "org.example.planservice.grpc.group";
+
+service GroupQueryService {
+  rpc IsUserInGroup(IsUserInGroupRequest) returns (GroupMembershipResponse);
+}
+
+message IsUserInGroupRequest {
+  string user_id = 1;
+  string group_id = 2;
+}
+
+message GroupMembershipResponse {
+  bool is_member = 1;
+}

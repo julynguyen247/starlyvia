@@ -1,0 +1,25 @@
+server:
+  port: 8083
+
+group:
+  grpc:
+    host: ${GROUP_GRPC_HOST:localhost}
+    port: ${GROUP_GRPC_PORT:9092}
+
+spring:
+  application:
+    name: plan-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5435/plan_db
+    username: starlyvia
+    password: starlyvia
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true

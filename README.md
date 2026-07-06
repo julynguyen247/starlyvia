@@ -1,6 +1,6 @@
 # Starlyvia
 
-Starlyvia is a Java 25 Spring Boot microservice project. It contains authentication and couple services backed by PostgreSQL, plus an API gateway that fronts the backend services.
+Starlyvia is a Java 25 Spring Boot microservice project. It contains authentication and group services backed by PostgreSQL, plus an API gateway that fronts the backend services.
 
 ## Tech Stack
 
@@ -23,7 +23,10 @@ Starlyvia is a Java 25 Spring Boot microservice project. It contains authenticat
 |-- auth-service/
 |   |-- pom.xml
 |   `-- src/
-`-- couple-service/
+|-- group-service/
+|   |-- pom.xml
+|   `-- src/
+`-- plan-service/
     |-- pom.xml
     `-- src/
 ```
@@ -34,11 +37,13 @@ Starlyvia is a Java 25 Spring Boot microservice project. It contains authenticat
 | --- | --- | --- |
 | `api-gateway` | Spring Cloud Gateway application | `8080` |
 | `auth-service` | Authentication API with registration, login, and token validation | `8081` |
-| `couple-service` | Couple request and couple API | `8082` |
+| `group-service` | Group, membership, and invitation API | `8082` |
+| `plan-service` | Plan and stop scheduling API | `8083` |
 | `auth-postgres` | PostgreSQL database for `auth-service` | `5433` on host |
-| `couple-postgres` | PostgreSQL database for `couple-service` | `5434` on host |
+| `group-postgres` | PostgreSQL database for `group-service` | `5434` on host |
+| `plan-postgres` | PostgreSQL database for `plan-service` | `5435` on host |
 
-The gateway routes `/api/v1/auth/**` traffic to `auth-service`, routes `/api/v1/couples/**` traffic to `couple-service`, and validates JWTs for protected routes. `auth-service` owns the `users` table; `couple-service` stores only user UUIDs from JWT claims in `couple_requests` and `couples`.
+The gateway routes `/api/v1/auth/**` traffic to `auth-service`, `/api/v1/groups/**` traffic to `group-service`, and plan traffic to `plan-service`. Protected routes are validated with JWT. `auth-service` owns the `users` table; `group-service` stores group membership; `plan-service` stores plans and stops.
 
 ## Prerequisites
 
@@ -58,15 +63,23 @@ username: starlyvia
 password: starlyvia
 ```
 
-The couple service is configured to connect to:
+The group service is configured to connect to:
 
 ```text
-jdbc:postgresql://localhost:5434/couple_db
+jdbc:postgresql://localhost:5434/group_db
 username: starlyvia
 password: starlyvia
 ```
 
-This repository includes a `docker-compose.yml` for separate auth and couple PostgreSQL containers, `auth-service`, `couple-service`, and `api-gateway`.
+The plan service is configured to connect to:
+
+```text
+jdbc:postgresql://localhost:5435/plan_db
+username: starlyvia
+password: starlyvia
+```
+
+This repository includes a `docker-compose.yml` for separate auth, group, and plan PostgreSQL containers, `auth-service`, `group-service`, `plan-service`, and `api-gateway`.
 
 Start the full stack:
 
@@ -106,11 +119,11 @@ services:
     ports:
       - "5433:5432"
 
-  couple-postgres:
+  group-postgres:
     image: postgres:16-alpine
-    container_name: starlyvia-couple-postgres
+    container_name: starlyvia-group-postgres
     environment:
-      POSTGRES_DB: couple_db
+      POSTGRES_DB: group_db
       POSTGRES_USER: starlyvia
       POSTGRES_PASSWORD: starlyvia
     ports:
@@ -118,7 +131,7 @@ services:
 
 volumes:
   auth-postgres-data:
-  couple-postgres-data:
+  group-postgres-data:
 ```
 
 ## Running Locally
@@ -139,10 +152,17 @@ cd api-gateway
 ./mvnw spring-boot:run
 ```
 
-Run the couple service:
+Run the group service:
 
 ```bash
-cd couple-service
+cd group-service
+./mvnw spring-boot:run
+```
+
+Run the plan service:
+
+```bash
+cd plan-service
 ./mvnw spring-boot:run
 ```
 
@@ -177,34 +197,46 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 }'
 ```
 
-## Couple API
+## Group API
 
 Base URL:
 
 ```text
-http://localhost:8080/api/v1/couples
+http://localhost:8080/api/v1/groups
 ```
 
-Send a couple request:
+Create a group:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/couples/requests \
+curl -X POST http://localhost:8080/api/v1/groups \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"receiverId":"<receiver-user-id>"}'
+  -d '{
+    "name": "Weekend plan",
+    "type": "FRIENDS"
+  }'
 ```
 
-Accept a couple request:
+Invite a user to a group:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/couples/requests/<request-id>/accept \
+curl -X POST http://localhost:8080/api/v1/groups/<group-id>/invitations \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"inviteeId":"<invitee-user-id>"}'
+```
+
+Accept a group invitation:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/groups/invitations/<invitation-id>/accept \
   -H "Authorization: Bearer <token>"
 ```
 
-List current user's couple:
+List current user's groups:
 
 ```bash
-curl http://localhost:8080/api/v1/couples \
+curl http://localhost:8080/api/v1/groups \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -226,10 +258,10 @@ Auth service configuration is in:
 auth-service/src/main/resources/application.yaml
 ```
 
-Couple service configuration is in:
+Group service configuration is in:
 
 ```text
-couple-service/src/main/resources/application.yaml
+group-service/src/main/resources/application.yaml
 ```
 
 Important properties:
@@ -267,14 +299,21 @@ cd api-gateway
 ./mvnw test
 ```
 
-Run tests for the couple service:
+Run tests for the group service:
 
 ```bash
-cd couple-service
+cd group-service
 ./mvnw test
 ```
 
-The auth and couple service test profiles use in-memory H2 databases from their `src/test/resources/application-test.yaml` files.
+Run tests for the plan service:
+
+```bash
+cd plan-service
+./mvnw test
+```
+
+The auth, group, and plan service test profiles use in-memory H2 databases from their `src/test/resources/application-test.yaml` files.
 
 ## Build
 
@@ -291,7 +330,12 @@ cd api-gateway
 ```
 
 ```bash
-cd couple-service
+cd group-service
+./mvnw clean package
+```
+
+```bash
+cd plan-service
 ./mvnw clean package
 ```
 
