@@ -53,6 +53,18 @@ spring:
                 - Path=/api/v1/couples/**
               filters:
                 - JwtValidation
+            - id: dateplan-service-date-plans
+              uri: ${dateplan.service.url}
+              predicates:
+                - Path=/api/v1/date-plans/**
+              filters:
+                - JwtValidation
+            - id: dateplan-service-plan-stops
+              uri: ${dateplan.service.url}
+              predicates:
+                - Path=/api/v1/plan-stops/**
+              filters:
+                - JwtValidation
 
 auth:
   service:
@@ -61,6 +73,10 @@ auth:
 couple:
   service:
     url: http://localhost:8082
+
+dateplan:
+  service:
+    url: http://localhost:8083
 
 jwt:
   secret: "starlyvia-super-secret-key-starlyvia-super-secret-key"

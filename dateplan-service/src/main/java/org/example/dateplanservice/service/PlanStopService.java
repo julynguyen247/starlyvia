@@ -25,10 +25,12 @@ public class PlanStopService {
     private final PlanStopRepository planStopRepository;
     private final DatePlanRepository datePlanRepository;
     private final PlanStopMapper planStopMapper;
+    private final DatePlanAccessPolicy datePlanAccessPolicy;
 
     @Transactional
-    public PlanStopResponse create(UUID datePlanId, PlanStopRequest request) {
+    public PlanStopResponse create(UUID currentUserId, UUID datePlanId, PlanStopRequest request) {
         DatePlan datePlan = findDatePlan(datePlanId);
+        datePlanAccessPolicy.assertCanEdit(datePlan, currentUserId);
         PlanStop planStop = planStopMapper.toEntity(request, datePlan);
         datePlan.setUpdatedAt(LocalDateTime.now());
 
@@ -56,8 +58,9 @@ public class PlanStopService {
     }
 
     @Transactional
-    public PlanStopResponse update(UUID id, UpdatePlanStopRequest request) {
+    public PlanStopResponse update(UUID currentUserId, UUID id, UpdatePlanStopRequest request) {
         PlanStop planStop = findPlanStop(id);
+        datePlanAccessPolicy.assertCanEdit(planStop.getDatePlan(), currentUserId);
         planStopMapper.updateEntity(planStop, request);
         planStop.getDatePlan().setUpdatedAt(LocalDateTime.now());
 
@@ -65,8 +68,9 @@ public class PlanStopService {
     }
 
     @Transactional
-    public void delete(UUID id) {
+    public void delete(UUID currentUserId, UUID id) {
         PlanStop planStop = findPlanStop(id);
+        datePlanAccessPolicy.assertCanEdit(planStop.getDatePlan(), currentUserId);
         planStop.getDatePlan().setUpdatedAt(LocalDateTime.now());
         planStopRepository.delete(planStop);
     }

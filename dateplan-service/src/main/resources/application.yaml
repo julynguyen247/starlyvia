@@ -1,3 +1,35 @@
+server:
+  port: 8083
+
 spring:
   application:
     name: dateplan-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5435/dateplan_db
+    username: starlyvia
+    password: starlyvia
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: dateplan-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+app:
+  kafka:
+    enabled: ${APP_KAFKA_ENABLED:true}
+    topics:
+      couple-accepted: couple.accepted
+      couple-removed: couple.removed

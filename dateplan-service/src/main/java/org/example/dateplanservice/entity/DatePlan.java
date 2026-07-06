@@ -42,7 +42,6 @@ public class DatePlan {
     @NotNull
     private LocalTime planEndTime;
 
-    @NotNull
     private UUID coupleId;
 
     @NotNull

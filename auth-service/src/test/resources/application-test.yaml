@@ -11,3 +11,11 @@ spring:
 jwt:
   secret: test-secret-key-test-secret-key-32-bytes
   expiration: 3600000
+
+grpc:
+  server:
+    port: 0
+
+app:
+  kafka:
+    enabled: false

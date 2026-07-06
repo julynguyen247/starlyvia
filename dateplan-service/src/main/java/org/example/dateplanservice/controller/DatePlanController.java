@@ -48,15 +48,19 @@ public class DatePlanController {
 
     @PutMapping("/{id}")
     public DatePlanResponse update(
+            @RequestHeader("X-User-Id") UUID currentUserId,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateDatePlanRequest request
     ) {
-        return datePlanService.update(id, request);
+        return datePlanService.update(currentUserId, id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable UUID id) {
-        datePlanService.delete(id);
+    public void delete(
+            @RequestHeader("X-User-Id") UUID currentUserId,
+            @PathVariable UUID id
+    ) {
+        datePlanService.delete(currentUserId, id);
     }
 }

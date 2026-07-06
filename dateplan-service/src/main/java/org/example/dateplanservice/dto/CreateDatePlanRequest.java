@@ -34,7 +34,6 @@ public class CreateDatePlanRequest {
     @NotNull
     private LocalTime planEndTime;
 
-    @NotNull
     private UUID coupleId;
 
     private PlanStatus status;

@@ -6,6 +6,7 @@ import org.example.dateplanservice.dto.DatePlanResponse;
 import org.example.dateplanservice.dto.UpdateDatePlanRequest;
 import org.example.dateplanservice.entity.DatePlan;
 import org.example.dateplanservice.mapper.DatePlanMapper;
+import org.example.dateplanservice.repository.CoupleMembershipRepository;
 import org.example.dateplanservice.repository.DatePlanRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,13 @@ import java.util.UUID;
 public class DatePlanService {
     private final DatePlanRepository datePlanRepository;
     private final DatePlanMapper datePlanMapper;
+    private final CoupleMembershipRepository coupleMembershipRepository;
+    private final DatePlanAccessPolicy datePlanAccessPolicy;
 
     @Transactional
     public DatePlanResponse create(UUID createdBy, CreateDatePlanRequest request) {
         DatePlan datePlan = datePlanMapper.toEntity(request, createdBy);
+        datePlan.setCoupleId(resolveCoupleId(createdBy, request.getCoupleId()));
         return datePlanMapper.toResponse(datePlanRepository.save(datePlan));
     }
 
@@ -45,20 +49,35 @@ public class DatePlanService {
     }
 
     @Transactional
-    public DatePlanResponse update(UUID id, UpdateDatePlanRequest request) {
+    public DatePlanResponse update(UUID currentUserId, UUID id, UpdateDatePlanRequest request) {
         DatePlan datePlan = findById(id);
+        datePlanAccessPolicy.assertCanEdit(datePlan, currentUserId);
         datePlanMapper.updateEntity(datePlan, request);
         return datePlanMapper.toResponse(datePlanRepository.save(datePlan));
     }
 
     @Transactional
-    public void delete(UUID id) {
+    public void delete(UUID currentUserId, UUID id) {
         DatePlan datePlan = findById(id);
+        datePlanAccessPolicy.assertCanEdit(datePlan, currentUserId);
         datePlanRepository.delete(datePlan);
     }
 
     private DatePlan findById(UUID id) {
         return datePlanRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Date plan not found"));
+    }
+
+    private UUID resolveCoupleId(UUID createdBy, UUID requestedCoupleId) {
+        if (requestedCoupleId == null) {
+            return coupleMembershipRepository.findFirstByUserIdOrPartnerId(createdBy, createdBy)
+                    .map(membership -> membership.getCoupleId())
+                    .orElse(null);
+        }
+
+        return coupleMembershipRepository.findById(requestedCoupleId)
+                .filter(membership -> membership.getUserId().equals(createdBy) || membership.getPartnerId().equals(createdBy))
+                .map(membership -> membership.getCoupleId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not part of this couple"));
     }
 }
