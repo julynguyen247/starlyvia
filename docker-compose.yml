@@ -68,6 +68,23 @@ services:
       timeout: 5s
       retries: 5
 
+  notification-postgres:
+    image: postgres:16-alpine
+    container_name: starlyvia-notification-postgres
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: starlyvia
+      POSTGRES_PASSWORD: starlyvia
+    ports:
+      - "5436:5432"
+    volumes:
+      - notification-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starlyvia -d notification_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     build:
       context: ./auth-service
@@ -130,6 +147,32 @@ services:
     ports:
       - "8083:8083"
 
+  place-service:
+    build:
+      context: ./place-service
+    container_name: starlyvia-place-service
+    environment:
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+    ports:
+      - "8084:8084"
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: starlyvia-notification-service
+    depends_on:
+      kafka:
+        condition: service_started
+      notification-postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notification-postgres:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: starlyvia
+      SPRING_DATASOURCE_PASSWORD: starlyvia
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8085:8085"
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -138,10 +181,14 @@ services:
       - auth-service
       - group-service
       - plan-service
+      - place-service
+      - notification-service
     environment:
       AUTH_SERVICE_URL: http://auth-service:8081
       GROUP_SERVICE_URL: http://group-service:8082
       PLAN_SERVICE_URL: http://plan-service:8083
+      PLACE_SERVICE_URL: http://place-service:8084
+      NOTIFICATION_SERVICE_URL: http://notification-service:8085
       JWT_SECRET: starlyvia-super-secret-key-starlyvia-super-secret-key
     ports:
       - "8080:8080"
@@ -151,3 +198,4 @@ volumes:
   auth-postgres-data:
   group-postgres-data:
   plan-postgres-data:
+  notification-postgres-data:

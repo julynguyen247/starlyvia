@@ -3,7 +3,7 @@ package org.example.planservice.service;
 import lombok.RequiredArgsConstructor;
 import org.example.planservice.dto.PlanStopRequest;
 import org.example.planservice.dto.PlanStopResponse;
-import org.example.planservice.dto.UpplanStopRequest;
+import org.example.planservice.dto.UpdatePlanStopRequest;
 import org.example.planservice.entity.Plan;
 import org.example.planservice.entity.PlanStop;
 import org.example.planservice.mapper.PlanStopMapper;
@@ -59,7 +59,7 @@ public class PlanStopService {
     }
 
     @Transactional
-    public PlanStopResponse update(UUID currentUserId, UUID id, UpplanStopRequest request) {
+    public PlanStopResponse update(UUID currentUserId, UUID id, UpdatePlanStopRequest request) {
         PlanStop planStop = findPlanStop(id);
         planAccessPolicy.assertCanEdit(planStop.getPlan(), currentUserId);
         planStopMapper.updateEntity(planStop, request);
@@ -78,7 +78,7 @@ public class PlanStopService {
 
     private Plan findPlan(UUID id) {
         return planRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Date plan not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan not found"));
     }
 
     private PlanStop findPlanStop(UUID id) {

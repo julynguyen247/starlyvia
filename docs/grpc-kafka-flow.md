@@ -8,17 +8,17 @@ flowchart LR
     AuthDb[(auth_db)]
     GroupDb[(group_db)]
     Kafka[(Kafka)]
-    Consumers[Future consumers<br/>notification-service<br/>plan-service]
+    Consumers[notification-service<br/>Future consumers<br/>plan-service]
 
     Client -- REST register / login --> Auth
     Auth -- write user --> AuthDb
-    Auth -- Kafka event<br/>user.registered --> Kafka
+    Auth -- Kafka domain topic<br/>auth.events<br/>eventType=user.registered --> Kafka
 
     Client -- REST create group / invite member --> Group
     Group -- gRPC UserExists(inviteeId) --> Auth
     Auth -- exists / not exists --> Group
     Group -- write group / member / invitation --> GroupDb
-    Group -- Kafka events<br/>group.created<br/>group.invitation.created<br/>group.member.added<br/>group.member.removed --> Kafka
+    Group -- Kafka domain topic<br/>group.events<br/>eventType=group.* --> Kafka
 
     Kafka -- async consume --> Consumers
 ```

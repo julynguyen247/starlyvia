@@ -15,6 +15,13 @@ public class PlanStopResponse {
     private String address;
     private Double latitude;
     private Double longitude;
+    private String provider;
+    private String providerPlaceId;
+    private String photoUrl;
+    private Double rating;
+    private Integer ratingCount;
+    private String websiteUrl;
+    private String phoneNumber;
     private Integer orderIndex;
     private LocalTime arrivalTime;
     private LocalTime departureTime;

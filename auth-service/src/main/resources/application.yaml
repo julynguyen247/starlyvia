@@ -37,4 +37,4 @@ app:
   kafka:
     enabled: ${APP_KAFKA_ENABLED:true}
     topics:
-      user-registered: user.registered
+      auth-events: auth.events

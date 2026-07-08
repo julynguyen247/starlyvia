@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.planservice.client.GroupClient;
 import org.example.planservice.dto.CreatePlanRequest;
 import org.example.planservice.dto.PlanResponse;
-import org.example.planservice.dto.UpplanRequest;
+import org.example.planservice.dto.UpdatePlanRequest;
 import org.example.planservice.entity.Plan;
 import org.example.planservice.mapper.PlanMapper;
 import org.example.planservice.repository.PlanRepository;
@@ -54,7 +54,7 @@ public class PlanService {
     }
 
     @Transactional
-    public PlanResponse update(UUID currentUserId, UUID id, UpplanRequest request) {
+    public PlanResponse update(UUID currentUserId, UUID id, UpdatePlanRequest request) {
         Plan plan = findById(id);
         planAccessPolicy.assertCanEdit(plan, currentUserId);
         planMapper.updateEntity(plan, request);
@@ -70,7 +70,7 @@ public class PlanService {
 
     private Plan findById(UUID id) {
         return planRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Date plan not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan not found"));
     }
 
     private UUID resolveGroupId(UUID createdBy, UUID requestedGroupId) {

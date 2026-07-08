@@ -14,7 +14,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class UpplanRequest {
+public class UpdatePlanRequest {
     @NotBlank
     private String planName;
 

@@ -30,17 +30,8 @@ public class GroupService {
     private final UserClient userClient;
     private final DomainEventPublisher eventPublisher;
 
-    @Value("${app.kafka.topics.group-created:group.created}")
-    private String groupCreatedTopic;
-
-    @Value("${app.kafka.topics.group-invitation-created:group.invitation.created}")
-    private String groupInvitationCreatedTopic;
-
-    @Value("${app.kafka.topics.group-member-added:group.member.added}")
-    private String groupMemberAddedTopic;
-
-    @Value("${app.kafka.topics.group-member-removed:group.member.removed}")
-    private String groupMemberRemovedTopic;
+    @Value("${app.kafka.topics.group-events:group.events}")
+    private String groupEventsTopic;
 
     @Transactional
     public PlanGroup create(UUID currentUserId, CreateGroupRequest request) {
@@ -57,7 +48,7 @@ public class GroupService {
                 .userId(currentUserId)
                 .role(GroupRole.OWNER)
                 .build());
-        publishGroupEvent(groupCreatedTopic, "group.created", savedGroup.getId(), currentUserId, currentUserId);
+        publishGroupEvent("group.created", savedGroup.getId(), currentUserId, currentUserId);
         return savedGroup;
     }
 
@@ -104,7 +95,7 @@ public class GroupService {
         invitation.setStatus(GroupInvitationStatus.PENDING);
 
         GroupInvitation savedInvitation = groupInvitationRepository.save(invitation);
-        publishGroupEvent(groupInvitationCreatedTopic, "group.invitation.created", groupId, currentUserId, inviteeId);
+        publishGroupEvent("group.invitation.created", groupId, currentUserId, inviteeId);
         return savedInvitation;
     }
 
@@ -139,7 +130,7 @@ public class GroupService {
                 .userId(currentUserId)
                 .role(GroupRole.MEMBER)
                 .build());
-        publishGroupEvent(groupMemberAddedTopic, "group.member.added", groupId, currentUserId, currentUserId);
+        publishGroupEvent("group.member.added", groupId, currentUserId, currentUserId);
         return member;
     }
 
@@ -169,7 +160,7 @@ public class GroupService {
         }
 
         groupMemberRepository.deleteByGroupIdAndUserId(groupId, memberUserId);
-        publishGroupEvent(groupMemberRemovedTopic, "group.member.removed", groupId, currentUserId, memberUserId);
+        publishGroupEvent("group.member.removed", groupId, currentUserId, memberUserId);
     }
 
     private PlanGroup findGroup(UUID groupId) {
@@ -196,7 +187,7 @@ public class GroupService {
         }
     }
 
-    private void publishGroupEvent(String topic, String eventType, UUID groupId, UUID actorId, UUID targetUserId) {
+    private void publishGroupEvent(String eventType, UUID groupId, UUID actorId, UUID targetUserId) {
         GroupEvent payload = new GroupEvent(
                 UUID.randomUUID(),
                 eventType,
@@ -206,6 +197,6 @@ public class GroupService {
                 actorId,
                 targetUserId
         );
-        eventPublisher.publish(topic, groupId.toString(), payload);
+        eventPublisher.publish(groupEventsTopic, groupId.toString(), payload);
     }
 }

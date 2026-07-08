@@ -38,7 +38,4 @@ app:
   kafka:
     enabled: ${APP_KAFKA_ENABLED:true}
     topics:
-      group-created: group.created
-      group-invitation-created: group.invitation.created
-      group-member-added: group.member.added
-      group-member-removed: group.member.removed
+      group-events: group.events

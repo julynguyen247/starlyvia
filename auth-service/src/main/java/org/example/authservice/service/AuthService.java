@@ -29,8 +29,8 @@ public class AuthService {
     private final AuthResponseMapper authMapper;
     private final DomainEventPublisher eventPublisher;
 
-    @Value("${app.kafka.topics.user-registered:user.registered}")
-    private String userRegisteredTopic;
+    @Value("${app.kafka.topics.auth-events:auth.events}")
+    private String authEventsTopic;
 
     public RegisterResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -83,6 +83,6 @@ public class AuthService {
                 user.getAvatarUrl(),
                 user.getBio()
         );
-        eventPublisher.publish(userRegisteredTopic, user.getId().toString(), payload);
+        eventPublisher.publish(authEventsTopic, user.getId().toString(), payload);
     }
 }

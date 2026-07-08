@@ -65,6 +65,18 @@ spring:
                 - Path=/api/v1/plan-stops/**
               filters:
                 - JwtValidation
+            - id: place-service
+              uri: ${place.service.url}
+              predicates:
+                - Path=/api/v1/places/**
+              filters:
+                - JwtValidation
+            - id: notification-service
+              uri: ${notification.service.url}
+              predicates:
+                - Path=/api/v1/notifications/**
+              filters:
+                - JwtValidation
 
 auth:
   service:
@@ -77,6 +89,14 @@ group:
 plan:
   service:
     url: http://localhost:8083
+
+place:
+  service:
+    url: http://localhost:8084
+
+notification:
+  service:
+    url: http://localhost:8085
 
 jwt:
   secret: "starlyvia-super-secret-key-starlyvia-super-secret-key"

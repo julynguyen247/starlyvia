@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.planservice.dto.PlanStopRequest;
 import org.example.planservice.dto.PlanStopResponse;
-import org.example.planservice.dto.UpplanStopRequest;
+import org.example.planservice.dto.UpdatePlanStopRequest;
 import org.example.planservice.service.PlanStopService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -55,7 +55,7 @@ public class PlanStopController {
     public PlanStopResponse update(
             @RequestHeader("X-User-Id") UUID currentUserId,
             @PathVariable UUID id,
-            @Valid @RequestBody UpplanStopRequest request
+            @Valid @RequestBody UpdatePlanStopRequest request
     ) {
         return planStopService.update(currentUserId, id, request);
     }

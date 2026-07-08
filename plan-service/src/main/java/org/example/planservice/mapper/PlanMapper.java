@@ -5,7 +5,7 @@ import org.example.planservice.dto.PlanResponse;
 import org.example.planservice.dto.PlanStopRequest;
 import org.example.planservice.dto.PlanStopResponse;
 import org.example.planservice.dto.PlanTimelineSegmentResponse;
-import org.example.planservice.dto.UpplanRequest;
+import org.example.planservice.dto.UpdatePlanRequest;
 import org.example.planservice.entity.Plan;
 import org.example.planservice.entity.PlanStop;
 import org.example.planservice.enums.PlanStatus;
@@ -40,7 +40,7 @@ public class PlanMapper {
         return plan;
     }
 
-    public void updateEntity(Plan plan, UpplanRequest request) {
+    public void updateEntity(Plan plan, UpdatePlanRequest request) {
         plan.setPlanName(request.getPlanName());
         plan.setPlanDescription(request.getPlanDescription());
         plan.setPlanStartDate(request.getPlanStartDate());
@@ -126,6 +126,13 @@ public class PlanMapper {
                 .address(request.getAddress())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .provider(request.getProvider())
+                .providerPlaceId(request.getProviderPlaceId())
+                .photoUrl(request.getPhotoUrl())
+                .rating(request.getRating())
+                .ratingCount(request.getRatingCount())
+                .websiteUrl(request.getWebsiteUrl())
+                .phoneNumber(request.getPhoneNumber())
                 .orderIndex(request.getOrderIndex())
                 .arrivalTime(request.getArrivalTime())
                 .departureTime(request.getDepartureTime())
@@ -142,6 +149,13 @@ public class PlanMapper {
                 stop.getAddress(),
                 stop.getLatitude(),
                 stop.getLongitude(),
+                stop.getProvider(),
+                stop.getProviderPlaceId(),
+                stop.getPhotoUrl(),
+                stop.getRating(),
+                stop.getRatingCount(),
+                stop.getWebsiteUrl(),
+                stop.getPhoneNumber(),
                 stop.getOrderIndex(),
                 stop.getArrivalTime(),
                 stop.getDepartureTime(),
