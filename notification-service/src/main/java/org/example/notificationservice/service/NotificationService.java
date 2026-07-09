@@ -1,14 +1,15 @@
 package org.example.notificationservice.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.notificationservice.dto.CreateNotificationRequest;
 import org.example.notificationservice.dto.NotificationResponse;
-import org.example.notificationservice.dto.UpdateNotificationRequest;
 import org.example.notificationservice.entity.Notification;
 import org.example.notificationservice.entity.NotificationStatus;
 import org.example.notificationservice.entity.NotificationType;
 import org.example.notificationservice.mapper.NotificationMapper;
 import org.example.notificationservice.repository.NotificationRepository;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,13 +26,49 @@ public class NotificationService {
     private final NotificationMapper notificationMapper;
 
     @Transactional
-    public NotificationResponse create(UUID currentUserId, CreateNotificationRequest request) {
-        Notification notification = notificationMapper.toEntity(currentUserId, request);
-        return notificationMapper.toResponse(notificationRepository.save(notification));
+    public NotificationResponse createFromEvent(
+            UUID sourceEventId,
+            String sourceTopic,
+            UUID recipientUserId,
+            UUID actorUserId,
+            NotificationType type,
+            String title,
+            String message,
+            String resourceType,
+        UUID resourceId
+    ){
+        if (sourceEventId != null) {
+            return notificationRepository.findBySourceEventIdAndRecipientUserId(sourceEventId, recipientUserId)
+                    .map(notificationMapper::toResponse)
+                    .orElseGet(() -> createEventNotification(
+                            sourceEventId,
+                            sourceTopic,
+                            recipientUserId,
+                            actorUserId,
+                            type,
+                            title,
+                            message,
+                            resourceType,
+                            resourceId
+                    ));
+        }
+
+        return createEventNotification(
+                null,
+                sourceTopic,
+                recipientUserId,
+                actorUserId,
+                type,
+                title,
+                message,
+                resourceType,
+                resourceId
+        );
     }
 
-    @Transactional
-    public NotificationResponse createFromEvent(
+    private NotificationResponse createEventNotification(
+            UUID sourceEventId,
+            String sourceTopic,
             UUID recipientUserId,
             UUID actorUserId,
             NotificationType type,
@@ -39,7 +76,7 @@ public class NotificationService {
             String message,
             String resourceType,
             UUID resourceId
-    ){
+    ) {
         Notification notification = Notification.builder()
                 .recipientUserId(recipientUserId)
                 .actorUserId(actorUserId)
@@ -48,16 +85,26 @@ public class NotificationService {
                 .message(message)
                 .resourceType(resourceType)
                 .resourceId(resourceId)
+                .sourceEventId(sourceEventId)
+                .sourceTopic(sourceTopic)
                 .status(NotificationStatus.UNREAD)
                 .build();
-        return notificationMapper.toResponse(notificationRepository.save(notification));
+        try {
+            return notificationMapper.toResponse(notificationRepository.save(notification));
+        } catch (DataIntegrityViolationException ex) {
+            if (sourceEventId == null) {
+                throw ex;
+            }
+            return notificationRepository.findBySourceEventIdAndRecipientUserId(sourceEventId, recipientUserId)
+                    .map(notificationMapper::toResponse)
+                    .orElseThrow(() -> ex);
+        }
     }
 
     @Transactional(readOnly = true)
-    public List<NotificationResponse> getMyNotifications(UUID currentUserId) {
-        return notificationRepository.findByRecipientUserIdOrderByCreatedAtDesc(currentUserId).stream()
-                .map(notificationMapper::toResponse)
-                .toList();
+    public Page<NotificationResponse> getMyNotifications(UUID currentUserId, Pageable pageable) {
+        return notificationRepository.findByRecipientUserId(currentUserId, pageable)
+                .map(notificationMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -68,13 +115,6 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public long countUnread(UUID currentUserId) {
         return notificationRepository.countByRecipientUserIdAndStatus(currentUserId, NotificationStatus.UNREAD);
-    }
-
-    @Transactional
-    public NotificationResponse update(UUID currentUserId, UUID id, UpdateNotificationRequest request) {
-        Notification notification = findOwnedNotification(currentUserId, id);
-        notificationMapper.updateEntity(notification, request);
-        return notificationMapper.toResponse(notificationRepository.save(notification));
     }
 
     @Transactional

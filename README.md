@@ -228,9 +228,10 @@ Domain events are grouped by service domain:
 ```text
 auth.events
 group.events
+plan.events
 ```
 
-The event action is carried in the JSON payload as `eventType`, such as `user.registered`, `group.invitation.created`, `group.member.added`, and `group.member.removed`.
+The event action is carried in the JSON payload as `eventType`, such as `user.registered`, `group.invitation.created`, `group.member.added`, `group.member.removed`, `plan.created`, `plan.updated`, and `plan.deleted`.
 
 ## Auth API
 
@@ -346,7 +347,7 @@ http://localhost:8080/api/v1/notifications
 List current user's notifications:
 
 ```bash
-curl http://localhost:8080/api/v1/notifications \
+curl "http://localhost:8080/api/v1/notifications?page=0&size=20" \
   -H "Authorization: Bearer <token>"
 ```
 

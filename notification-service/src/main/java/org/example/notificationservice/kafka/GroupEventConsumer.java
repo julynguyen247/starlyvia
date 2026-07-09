@@ -6,6 +6,8 @@ import org.example.notificationservice.event.GroupEvent;
 import org.example.notificationservice.service.NotificationService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
@@ -22,23 +24,23 @@ public class GroupEventConsumer {
     }
 
     @KafkaListener(topics = "${app.kafka.topics.group-events}")
-    public void handleGroupEvent(String payload) {
+    public void handleGroupEvent(
+            String payload,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic
+    ) {
         GroupEvent event = objectMapper.readValue(payload, GroupEvent.class);
         switch (event.eventType()) {
-            case "group.created" -> handleGroupCreated(event);
-            case "group.invitation.created" -> handleGroupInvitationCreated(event);
-            case "group.member.added" -> handleGroupMemberAdded(event);
-            case "group.member.removed" -> handleGroupMemberRemoved(event);
+            case "group.invitation.created" -> handleGroupInvitationCreated(event, topic);
+            case "group.member.added" -> handleGroupMemberAdded(event, topic);
+            case "group.member.removed" -> handleGroupMemberRemoved(event, topic);
             default -> log.info("Ignored group event type {}: {}", event.eventType(), payload);
         }
     }
 
-    private void handleGroupCreated(GroupEvent event) {
-        log.info("Received group.created event: {}", event);
-    }
-
-    private void handleGroupInvitationCreated(GroupEvent event) {
+    private void handleGroupInvitationCreated(GroupEvent event, String topic) {
         notificationService.createFromEvent(
+                event.eventId(),
+                topic,
                 event.targetUserId(),
                 event.actorId(),
                 NotificationType.GROUP_INVITATION_CREATED,
@@ -49,8 +51,10 @@ public class GroupEventConsumer {
         );
     }
 
-    private void handleGroupMemberAdded(GroupEvent event) {
+    private void handleGroupMemberAdded(GroupEvent event, String topic) {
         notificationService.createFromEvent(
+                event.eventId(),
+                topic,
                 event.targetUserId(),
                 event.actorId(),
                 NotificationType.GROUP_MEMBER_ADDED,
@@ -61,8 +65,10 @@ public class GroupEventConsumer {
         );
     }
 
-    private void handleGroupMemberRemoved(GroupEvent event) {
+    private void handleGroupMemberRemoved(GroupEvent event, String topic) {
         notificationService.createFromEvent(
+                event.eventId(),
+                topic,
                 event.targetUserId(),
                 event.actorId(),
                 NotificationType.GROUP_MEMBER_REMOVED,

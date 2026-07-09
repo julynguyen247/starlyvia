@@ -134,6 +134,8 @@ services:
       context: ./plan-service
     container_name: starlyvia-plan-service
     depends_on:
+      kafka:
+        condition: service_started
       plan-postgres:
         condition: service_healthy
       group-service:
@@ -144,6 +146,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: starlyvia
       GROUP_GRPC_HOST: group-service
       GROUP_GRPC_PORT: 9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8083:8083"
 

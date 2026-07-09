@@ -8,6 +8,7 @@ option java_package = "org.example.groupservice.grpc.group";
 
 service GroupQueryService {
   rpc IsUserInGroup(IsUserInGroupRequest) returns (GroupMembershipResponse);
+  rpc GetGroupMemberIds(GetGroupMemberIdsRequest) returns (GroupMemberIdsResponse);
 }
 
 message IsUserInGroupRequest {
@@ -17,4 +18,12 @@ message IsUserInGroupRequest {
 
 message GroupMembershipResponse {
   bool is_member = 1;
+}
+
+message GetGroupMemberIdsRequest {
+  string group_id = 1;
+}
+
+message GroupMemberIdsResponse {
+  repeated string user_ids = 1;
 }
