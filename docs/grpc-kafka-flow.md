@@ -5,10 +5,12 @@ flowchart LR
     Client[Client / API Gateway]
     Auth[auth-service]
     Group[group-service]
+    Plan[plan-service]
     AuthDb[(auth_db)]
     GroupDb[(group_db)]
+    PlanDb[(plan_db)]
     Kafka[(Kafka)]
-    Consumers[notification-service<br/>Future consumers<br/>plan-service]
+    Consumers[notification-service<br/>Future consumers]
 
     Client -- REST register / login --> Auth
     Auth -- write user --> AuthDb
@@ -19,6 +21,11 @@ flowchart LR
     Auth -- exists / not exists --> Group
     Group -- write group / member / invitation --> GroupDb
     Group -- Kafka domain topic<br/>group.events<br/>eventType=group.* --> Kafka
+
+    Client -- REST create / update / delete plan --> Plan
+    Plan -- gRPC membership / member IDs --> Group
+    Plan -- write plan --> PlanDb
+    Plan -- Kafka domain topic<br/>plan.events<br/>eventType=plan.* --> Kafka
 
     Kafka -- async consume --> Consumers
 ```

@@ -134,9 +134,13 @@ services:
       context: ./plan-service
     container_name: starlyvia-plan-service
     depends_on:
+      kafka:
+        condition: service_started
       plan-postgres:
         condition: service_healthy
       group-service:
+        condition: service_started
+      routing-service:
         condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://plan-postgres:5432/plan_db
@@ -144,6 +148,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: starlyvia
       GROUP_GRPC_HOST: group-service
       GROUP_GRPC_PORT: 9092
+      ROUTING_GRPC_HOST: routing-service
+      ROUTING_GRPC_PORT: 9093
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8083:8083"
 
@@ -173,6 +180,17 @@ services:
     ports:
       - "8085:8085"
 
+  routing-service:
+    build:
+      context: ./routing-service
+    container_name: starlyvia-routing-service
+    environment:
+      OPENROUTESERVICE_API_KEY: ${OPENROUTESERVICE_API_KEY:-}
+      GRPC_SERVER_PORT: 9093
+    ports:
+      - "8086:8086"
+      - "9093:9093"
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -183,12 +201,14 @@ services:
       - plan-service
       - place-service
       - notification-service
+      - routing-service
     environment:
       AUTH_SERVICE_URL: http://auth-service:8081
       GROUP_SERVICE_URL: http://group-service:8082
       PLAN_SERVICE_URL: http://plan-service:8083
       PLACE_SERVICE_URL: http://place-service:8084
       NOTIFICATION_SERVICE_URL: http://notification-service:8085
+      ROUTING_SERVICE_URL: http://routing-service:8086
       JWT_SECRET: starlyvia-super-secret-key-starlyvia-super-secret-key
     ports:
       - "8080:8080"

@@ -3,6 +3,8 @@ package org.example.groupservice.grpcserver;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
+import org.example.groupservice.grpc.group.GetGroupMemberIdsRequest;
+import org.example.groupservice.grpc.group.GroupMemberIdsResponse;
 import org.example.groupservice.grpc.group.GroupMembershipResponse;
 import org.example.groupservice.grpc.group.GroupQueryServiceGrpc;
 import org.example.groupservice.grpc.group.IsUserInGroupRequest;
@@ -30,6 +32,25 @@ public class GroupQueryGrpcService extends GroupQueryServiceGrpc.GroupQueryServi
         responseObserver.onNext(GroupMembershipResponse.newBuilder()
                 .setIsMember(groupMemberRepository.existsByGroupIdAndUserId(groupId, userId))
                 .build());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getGroupMemberIds(
+            GetGroupMemberIdsRequest request,
+            StreamObserver<GroupMemberIdsResponse> responseObserver
+    ) {
+        UUID groupId = parseUuid("group_id", request.getGroupId(), responseObserver);
+        if (groupId == null) {
+            return;
+        }
+
+        GroupMemberIdsResponse response = GroupMemberIdsResponse.newBuilder()
+                .addAllUserIds(groupMemberRepository.findByGroupId(groupId).stream()
+                        .map(member -> member.getUserId().toString())
+                        .toList())
+                .build();
+        responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
 

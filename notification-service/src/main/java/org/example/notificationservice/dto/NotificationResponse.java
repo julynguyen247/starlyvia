@@ -15,6 +15,8 @@ public record NotificationResponse(
         String message,
         String resourceType,
         UUID resourceId,
+        UUID sourceEventId,
+        String sourceTopic,
         NotificationStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,

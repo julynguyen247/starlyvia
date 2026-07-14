@@ -1,115 +1,207 @@
 # Starlyvia
 
-Starlyvia is a Java 25 Spring Boot microservice project. It contains authentication, group, plan, place, and notification services, plus an API gateway that fronts the backend services.
+Starlyvia is a Java 25 and Spring Boot 4.1 microservice backend for collaborative trip planning. It provides authentication, groups, plans and stops, place search, route calculation, and event-driven notifications behind a single API gateway.
 
-## Tech Stack
+## Current status
 
-- Java 25
-- Spring Boot 4.1.0
-- Spring Security
-- Spring Cloud Gateway
-- Spring Data JPA
-- PostgreSQL
-- Kafka
-- Docker Compose
-- Maven Wrapper
+The repository is in good shape for local development:
 
-## Project Structure
+- All seven application modules compile and their test suites pass.
+- Docker Compose configuration is valid and every application image builds.
+- JWT authentication is enforced at the API gateway.
+- Internal synchronous calls use gRPC.
+- Domain events use Kafka, with retry and dead-letter handling in the notification consumer.
+- PostgreSQL data is separated by service.
 
-```text
-.
-|-- api-gateway/
-|   |-- pom.xml
-|   `-- src/
-|-- auth-service/
-|   |-- pom.xml
-|   `-- src/
-|-- group-service/
-|   |-- pom.xml
-|   `-- src/
-|-- plan-service/
-|   |-- pom.xml
-|   `-- src/
-|-- place-service/
-|   |-- pom.xml
-|   `-- src/
-`-- notification-service/
-    |-- pom.xml
-    `-- src/
+It is not production-ready yet. See [Known limitations](#known-limitations) for the remaining security, reliability, observability, and test-coverage work.
+
+## System architecture
+
+```mermaid
+flowchart LR
+    Client[Web or mobile client]
+    Gateway[API Gateway<br/>HTTP :8080]
+
+    Auth[Auth Service<br/>HTTP :8081<br/>gRPC :9091]
+    Group[Group Service<br/>HTTP :8082<br/>gRPC :9092]
+    Plan[Plan Service<br/>HTTP :8083]
+    Place[Place Service<br/>HTTP :8084]
+    Notification[Notification Service<br/>HTTP :8085]
+    Routing[Routing Service<br/>HTTP :8086<br/>gRPC :9093]
+
+    AuthDB[(auth_db)]
+    GroupDB[(group_db)]
+    PlanDB[(plan_db)]
+    NotificationDB[(notification_db)]
+    Kafka[(Kafka)]
+    Google[Google Places API]
+    ORS[OpenRouteService API]
+
+    Client -->|REST + JWT| Gateway
+    Gateway -->|REST| Auth
+    Gateway -->|REST| Group
+    Gateway -->|REST| Plan
+    Gateway -->|REST| Place
+    Gateway -->|REST| Notification
+    Gateway -->|REST| Routing
+
+    Group -.->|gRPC: user lookup| Auth
+    Plan -.->|gRPC: group membership| Group
+    Plan -.->|gRPC: route calculation| Routing
+
+    Auth --> AuthDB
+    Group --> GroupDB
+    Plan --> PlanDB
+    Notification --> NotificationDB
+    Place -->|HTTPS| Google
+    Routing -->|HTTPS| ORS
+
+    Auth -->|auth.events| Kafka
+    Group -->|group.events| Kafka
+    Plan -->|plan.events| Kafka
+    Kafka -->|consume events| Notification
+```
+
+### Plan route flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Gateway as API Gateway
+    participant Plan as Plan Service
+    participant Group as Group Service
+    participant Routing as Routing Service
+    participant ORS as OpenRouteService
+
+    User->>Gateway: GET /api/v1/plans/{id}/route + JWT
+    Gateway->>Gateway: Validate JWT and add X-User-Id
+    Gateway->>Plan: Forward request
+    Plan->>Group: Check group membership (gRPC)
+    Group-->>Plan: Membership result
+    Plan->>Plan: Load and order plan stops
+    Plan->>Routing: ComputeRoute (gRPC)
+    Routing->>ORS: Directions request (HTTPS)
+    ORS-->>Routing: Distance, duration, geometry, legs
+    Routing-->>Plan: ComputeRouteResponse
+    Plan-->>User: JSON route response
 ```
 
 ## Services
 
-| Service | Description | Default Port |
-| --- | --- | --- |
-| `api-gateway` | Spring Cloud Gateway application | `8080` |
-| `auth-service` | Authentication API with registration, login, and token validation | `8081` |
-| `group-service` | Group, membership, and invitation API | `8082` |
-| `plan-service` | Plan and stop scheduling API | `8083` |
-| `place-service` | Place autocomplete, details, and nearby search API | `8084` |
-| `notification-service` | Notification API and Kafka event consumer | `8085` |
-| `kafka` | Domain event broker | `9094` on host |
-| `auth-postgres` | PostgreSQL database for `auth-service` | `5433` on host |
-| `group-postgres` | PostgreSQL database for `group-service` | `5434` on host |
-| `plan-postgres` | PostgreSQL database for `plan-service` | `5435` on host |
-| `notification-postgres` | PostgreSQL database for `notification-service` | `5436` on host |
+| Service | Responsibility | HTTP | gRPC | Storage and dependencies |
+| --- | --- | ---: | ---: | --- |
+| `api-gateway` | Routing, CORS, JWT validation, identity headers | `8080` | — | Calls all HTTP services |
+| `auth-service` | Registration, login, JWT issuance, user lookup | `8081` | `9091` | `auth_db`, Kafka |
+| `group-service` | Groups, members, and invitations | `8082` | `9092` | `group_db`, Auth gRPC, Kafka |
+| `plan-service` | Plans, ordered stops, access control, route orchestration | `8083` | — | `plan_db`, Group gRPC, Routing gRPC, Kafka |
+| `place-service` | Autocomplete, place details, nearby search | `8084` | — | Google Places API |
+| `notification-service` | Notification inbox and domain-event consumers | `8085` | — | `notification_db`, Kafka |
+| `routing-service` | Distance, duration, geometry, and route legs | `8086` | `9093` | OpenRouteService API |
 
-The gateway routes `/api/v1/auth/**` traffic to `auth-service`, `/api/v1/groups/**` traffic to `group-service`, plan traffic to `plan-service`, `/api/v1/places/**` traffic to `place-service`, and `/api/v1/notifications/**` traffic to `notification-service`. Protected routes are validated with JWT. `auth-service` owns the `users` table; `group-service` stores group membership; `plan-service` stores plans and stops; `place-service` proxies external map/place providers; `notification-service` stores per-user notifications and consumes domain events from Kafka.
+Infrastructure exposed by Docker Compose:
+
+| Component | Host port |
+| --- | ---: |
+| Kafka | `9094` |
+| Auth PostgreSQL | `5433` |
+| Group PostgreSQL | `5434` |
+| Plan PostgreSQL | `5435` |
+| Notification PostgreSQL | `5436` |
+
+## Communication model
+
+### External REST API
+
+Clients call `http://localhost:8080`. Registration and login are public; all other `/api/v1/**` routes require `Authorization: Bearer <token>`.
+
+After validation, the gateway forwards these identity headers to downstream services:
+
+- `X-User-Id`
+- `X-User-Email`
+- `X-User-Role`
+
+### Internal gRPC
+
+| Caller | Server | Purpose |
+| --- | --- | --- |
+| `group-service` | `auth-service:9091` | Validate and retrieve users |
+| `plan-service` | `group-service:9092` | Check membership and retrieve member IDs |
+| `plan-service` | `routing-service:9093` | Calculate a route for ordered plan stops |
+
+The `.proto` contracts are currently copied into both the client and server modules. Changes to a contract must be applied to both copies.
+
+### Kafka events
+
+| Topic | Producer | Consumer | Main event types |
+| --- | --- | --- | --- |
+| `auth.events` | `auth-service` | `notification-service` | `user.registered` |
+| `group.events` | `group-service` | `notification-service` | `group.invitation.created`, `group.member.added`, `group.member.removed` |
+| `plan.events` | `plan-service` | `notification-service` | `plan.created`, `plan.updated`, `plan.deleted` |
+
+Failed notification-consumer records are retried and then published to `<source-topic>.DLT`.
+
+## Technology stack
+
+- Java 25
+- Spring Boot 4.1
+- Spring Cloud Gateway
+- Spring Security and JWT
+- Spring Data JPA and PostgreSQL 16
+- gRPC and Protocol Buffers
+- Apache Kafka
+- Google Places API
+- OpenRouteService Directions API
+- Docker Compose
+- Maven Wrapper
+- JUnit 5, Mockito, H2, and Spring test support
+
+## Project structure
+
+```text
+.
+|-- api-gateway/
+|-- auth-service/
+|-- group-service/
+|-- plan-service/
+|-- place-service/
+|-- notification-service/
+|-- routing-service/
+|-- docker-compose.yml
+`-- README.md
+```
+
+Each application module owns its source code, Maven build, Dockerfile, configuration, and tests.
 
 ## Prerequisites
 
 - JDK 25
-- Docker and Docker Compose
+- Docker Engine with Docker Compose
 - Bash-compatible shell
+- Google Places API key for place lookups
+- OpenRouteService API key for route calculation
 
-Each service includes its own Maven Wrapper, so a system Maven installation is optional.
+A system Maven installation is optional because every module includes Maven Wrapper.
 
-## Database
+## Quick start with Docker Compose
 
-The auth service is configured to connect to:
-
-```text
-jdbc:postgresql://localhost:5433/auth_db
-username: starlyvia
-password: starlyvia
-```
-
-The group service is configured to connect to:
-
-```text
-jdbc:postgresql://localhost:5434/group_db
-username: starlyvia
-password: starlyvia
-```
-
-The plan service is configured to connect to:
-
-```text
-jdbc:postgresql://localhost:5435/plan_db
-username: starlyvia
-password: starlyvia
-```
-
-The notification service is configured to connect to:
-
-```text
-jdbc:postgresql://localhost:5436/notification_db
-username: starlyvia
-password: starlyvia
-```
-
-This repository includes a `docker-compose.yml` for Kafka, separate auth, group, plan, and notification PostgreSQL containers, `auth-service`, `group-service`, `plan-service`, `place-service`, `notification-service`, and `api-gateway`.
-
-Start the full stack:
+Set the external provider keys in your shell:
 
 ```bash
-docker compose up --build
+export GOOGLE_PLACES_API_KEY=your-google-places-api-key
+export OPENROUTESERVICE_API_KEY=your-openrouteservice-api-key
 ```
 
-Start it in the background:
+Build and start the full stack:
 
 ```bash
 docker compose up --build -d
+```
+
+Inspect containers and logs:
+
+```bash
+docker compose ps
+docker compose logs -f api-gateway
 ```
 
 Stop the stack:
@@ -118,129 +210,41 @@ Stop the stack:
 docker compose down
 ```
 
-Remove the PostgreSQL volume as well:
+Remove databases and Kafka volumes as well:
 
 ```bash
 docker compose down -v
 ```
 
-The Compose file uses these PostgreSQL services:
+## Running locally
 
-```yaml
-services:
-  auth-postgres:
-    image: postgres:16-alpine
-    container_name: starlyvia-auth-postgres
-    environment:
-      POSTGRES_DB: auth_db
-      POSTGRES_USER: starlyvia
-      POSTGRES_PASSWORD: starlyvia
-    ports:
-      - "5433:5432"
-
-  group-postgres:
-    image: postgres:16-alpine
-    container_name: starlyvia-group-postgres
-    environment:
-      POSTGRES_DB: group_db
-      POSTGRES_USER: starlyvia
-      POSTGRES_PASSWORD: starlyvia
-    ports:
-      - "5434:5432"
-
-  plan-postgres:
-    image: postgres:16-alpine
-    container_name: starlyvia-plan-postgres
-    environment:
-      POSTGRES_DB: plan_db
-      POSTGRES_USER: starlyvia
-      POSTGRES_PASSWORD: starlyvia
-    ports:
-      - "5435:5432"
-
-  notification-postgres:
-    image: postgres:16-alpine
-    container_name: starlyvia-notification-postgres
-    environment:
-      POSTGRES_DB: notification_db
-      POSTGRES_USER: starlyvia
-      POSTGRES_PASSWORD: starlyvia
-    ports:
-      - "5436:5432"
-
-volumes:
-  auth-postgres-data:
-  group-postgres-data:
-  plan-postgres-data:
-  notification-postgres-data:
-```
-
-## Running Locally
-
-Start PostgreSQL and Kafka first, then run the services in separate terminals.
-
-Run the auth service:
+Start the infrastructure first:
 
 ```bash
-cd auth-service
-./mvnw spring-boot:run
+docker compose up -d kafka auth-postgres group-postgres plan-postgres notification-postgres
 ```
 
-Run the API gateway:
+Then run each application in a separate terminal:
 
 ```bash
-cd api-gateway
-./mvnw spring-boot:run
+cd auth-service && ./mvnw spring-boot:run
+cd group-service && ./mvnw spring-boot:run
+cd routing-service && OPENROUTESERVICE_API_KEY=your-openrouteservice-api-key ./mvnw spring-boot:run
+cd plan-service && ./mvnw spring-boot:run
+cd place-service && GOOGLE_PLACES_API_KEY=your-google-places-api-key ./mvnw spring-boot:run
+cd notification-service && ./mvnw spring-boot:run
+cd api-gateway && ./mvnw spring-boot:run
 ```
 
-Run the group service:
+The default local database credentials are `starlyvia` / `starlyvia`. They are development credentials only.
 
-```bash
-cd group-service
-./mvnw spring-boot:run
-```
+## API overview
 
-Run the plan service:
+All examples use the gateway at `http://localhost:8080`.
 
-```bash
-cd plan-service
-./mvnw spring-boot:run
-```
+### Authentication
 
-Run the place service:
-
-```bash
-cd place-service
-GOOGLE_PLACES_API_KEY=<google-places-api-key> ./mvnw spring-boot:run
-```
-
-Run the notification service:
-
-```bash
-cd notification-service
-./mvnw spring-boot:run
-```
-
-## Kafka Topics
-
-Domain events are grouped by service domain:
-
-```text
-auth.events
-group.events
-```
-
-The event action is carried in the JSON payload as `eventType`, such as `user.registered`, `group.invitation.created`, `group.member.added`, and `group.member.removed`.
-
-## Auth API
-
-Base URL:
-
-```text
-http://localhost:8080/api/v1/auth
-```
-
-Register a user:
+Register:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
@@ -252,253 +256,162 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
   }'
 ```
 
-Log in:
+Login:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-}'
+  -d '{"email":"user@example.com","password":"password123"}'
 ```
 
-## Group API
+Use the returned token in the following requests.
 
-Base URL:
-
-```text
-http://localhost:8080/api/v1/groups
-```
-
-Create a group:
+### Groups
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/groups \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
+  -d '{"name":"Weekend trip","description":"Two days away","type":"FRIENDS"}'
+```
+
+Group endpoints also support listing groups and members, sending invitations, accepting or rejecting invitations, and removing members.
+
+### Plans and stops
+
+Create a plan:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/plans \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
   -d '{
-    "name": "Weekend plan",
-    "type": "FRIENDS"
+    "planName": "Saigon day trip",
+    "planDescription": "Food and museums",
+    "planStartDate": "2026-07-20",
+    "planEndDate": "2026-07-20",
+    "planStartTime": "08:00:00",
+    "planEndTime": "20:00:00",
+    "groupId": null,
+    "status": "DRAFT",
+    "stops": []
   }'
 ```
 
-Invite a user to a group:
+Calculate the route of an existing plan's ordered stops:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/groups/<group-id>/invitations \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"inviteeId":"<invitee-user-id>"}'
-```
-
-Accept a group invitation:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/groups/invitations/<invitation-id>/accept \
+curl "http://localhost:8080/api/v1/plans/<plan-id>/route?travelMode=DRIVE" \
   -H "Authorization: Bearer <token>"
 ```
 
-List current user's groups:
+Supported route modes are `DRIVE`, `WALK`, and `BICYCLE`. A route requires at least two stops with valid coordinates.
 
-```bash
-curl http://localhost:8080/api/v1/groups \
-  -H "Authorization: Bearer <token>"
-```
-
-## Place API
-
-Base URL:
-
-```text
-http://localhost:8080/api/v1/places
-```
-
-Autocomplete places:
+### Places
 
 ```bash
 curl "http://localhost:8080/api/v1/places/autocomplete?query=cafe&lat=10.7769&lng=106.7009&sessionToken=<uuid>" \
   -H "Authorization: Bearer <token>"
 ```
 
-Get place details:
+The service also exposes `/details` and `/nearby` endpoints.
+
+### Direct route calculation
 
 ```bash
-curl "http://localhost:8080/api/v1/places/details?provider=GOOGLE&providerPlaceId=<google-place-id>" \
+curl -X POST http://localhost:8080/api/v1/routes/compute \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "travelMode": "DRIVE",
+    "stops": [
+      {"latitude": 10.7769, "longitude": 106.7009},
+      {"latitude": 10.7825, "longitude": 106.6958}
+    ]
+  }'
+```
+
+### Notifications
+
+```bash
+curl "http://localhost:8080/api/v1/notifications?page=0&size=20" \
   -H "Authorization: Bearer <token>"
 ```
 
-Search nearby places:
-
-```bash
-curl "http://localhost:8080/api/v1/places/nearby?lat=10.7769&lng=106.7009&type=restaurant" \
-  -H "Authorization: Bearer <token>"
-```
-
-## Notification API
-
-Base URL:
-
-```text
-http://localhost:8080/api/v1/notifications
-```
-
-List current user's notifications:
-
-```bash
-curl http://localhost:8080/api/v1/notifications \
-  -H "Authorization: Bearer <token>"
-```
-
-Get unread count:
-
-```bash
-curl http://localhost:8080/api/v1/notifications/unread-count \
-  -H "Authorization: Bearer <token>"
-```
-
-Mark a notification as read:
-
-```bash
-curl -X PATCH http://localhost:8080/api/v1/notifications/<notification-id>/read \
-  -H "Authorization: Bearer <token>"
-```
+Notification endpoints also support unread count, get by ID, mark one or all as read, and delete.
 
 ## Swagger UI
 
-After starting the stack, open:
+The current OpenAPI UI documents the authentication service only:
 
 ```text
 http://localhost:8080/swagger-ui.html
 ```
 
-The Swagger UI is served through the API gateway and can be used to test the `/api/v1/auth/register` and `/api/v1/auth/login` endpoints.
-
 ## Configuration
 
-Auth service configuration is in:
+Important environment variables:
 
-```text
-auth-service/src/main/resources/application.yaml
-```
+| Variable | Used by | Purpose |
+| --- | --- | --- |
+| `JWT_SECRET` | Gateway, Auth | JWT signing and validation secret |
+| `GOOGLE_PLACES_API_KEY` | Place | Google Places authentication |
+| `OPENROUTESERVICE_API_KEY` | Routing | OpenRouteService authentication |
+| `OPENROUTESERVICE_BASE_URL` | Routing | Override the routing provider URL for tests or self-hosting |
+| `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Auth, Group, Plan, Notification | Kafka broker addresses |
+| `AUTH_GRPC_HOST`, `AUTH_GRPC_PORT` | Group | Auth gRPC endpoint |
+| `GROUP_GRPC_HOST`, `GROUP_GRPC_PORT` | Plan | Group gRPC endpoint |
+| `ROUTING_GRPC_HOST`, `ROUTING_GRPC_PORT` | Plan | Routing gRPC endpoint |
+| `GRPC_SERVER_PORT` | Auth, Group, Routing | gRPC listen port |
+| `APP_KAFKA_ENABLED` | Event producers and consumers | Enable or disable Kafka integration |
 
-Group service configuration is in:
+Without the required external API key, the place or route lookup endpoint returns `503` when running through Docker Compose.
 
-```text
-group-service/src/main/resources/application.yaml
-```
+## Testing and build
 
-Place service configuration is in:
-
-```text
-place-service/src/main/resources/application.yaml
-```
-
-Notification service configuration is in:
-
-```text
-notification-service/src/main/resources/application.yaml
-```
-
-Important properties:
-
-```yaml
-server:
-  port: 8081
-
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5433/auth_db
-    username: starlyvia
-    password: starlyvia
-
-jwt:
-  secret: "starlyvia-super-secret-key-starlyvia-super-secret-key"
-  expiration: 36000000
-```
-
-`place-service` uses `GOOGLE_PLACES_API_KEY` to call Google Places. Without that value, the service starts, but place lookup endpoints return `503`.
-
-For production, move secrets and database credentials to environment variables or a secrets manager.
-
-## Testing
-
-Run tests for the auth service:
-
-```bash
-cd auth-service
-./mvnw test
-```
-
-Run tests for the API gateway:
-
-```bash
-cd api-gateway
-./mvnw test
-```
-
-Run tests for the group service:
-
-```bash
-cd group-service
-./mvnw test
-```
-
-Run tests for the plan service:
+Run a module's tests:
 
 ```bash
 cd plan-service
 ./mvnw test
 ```
 
-Run tests for the place service:
+Run every test suite from the repository root:
 
 ```bash
-cd place-service
-./mvnw test
+for service in api-gateway auth-service group-service plan-service place-service notification-service routing-service; do
+  (cd "$service" && ./mvnw test) || exit 1
+done
 ```
 
-Run tests for the notification service:
+Latest local verification:
+
+| Module | Passing tests |
+| --- | ---: |
+| `api-gateway` | 6 |
+| `auth-service` | 2 |
+| `group-service` | 6 |
+| `plan-service` | 5 |
+| `place-service` | 1 |
+| `notification-service` | 7 |
+| `routing-service` | 6 |
+| **Total** | **33** |
+
+Build all Docker images:
 
 ```bash
-cd notification-service
-./mvnw test
+docker compose build
 ```
 
-The auth, group, plan, and notification service test profiles use in-memory H2 databases from their `src/test/resources/application-test.yaml` files.
+## Known limitations
 
-## Build
-
-Build each service:
-
-```bash
-cd auth-service
-./mvnw clean package
-```
-
-```bash
-cd api-gateway
-./mvnw clean package
-```
-
-```bash
-cd group-service
-./mvnw clean package
-```
-
-```bash
-cd plan-service
-./mvnw clean package
-```
-
-```bash
-cd place-service
-./mvnw clean package
-```
-
-```bash
-cd notification-service
-./mvnw clean package
-```
-
-The packaged applications are generated under each module's `target/` directory.
+- The current Docker Compose setup is intended for development and exposes service and database ports to the host.
+- Downstream services trust gateway identity headers. Production deployment must prevent clients from bypassing the gateway and spoofing those headers.
+- JWT secrets and database credentials in the repository are development defaults and must be replaced in deployed environments.
+- External provider keys must only come from environment variables or a secrets manager. Do not commit fallback keys to configuration files.
+- Internal gRPC connections currently use plaintext and do not use service-to-service authentication.
+- Database schemas use Hibernate `ddl-auto=update`; production should use versioned migrations such as Flyway or Liquibase.
+- Kafka publishing is not transactional with database writes. A transactional outbox is recommended for reliable event delivery.
+- Application health checks, distributed tracing, metrics dashboards, centralized logs, and resilience policies are still missing.
+- Test depth is uneven. Place, provider failure paths, Kafka integration, gateway-to-service integration, and full-stack end-to-end flows need broader coverage.
+- Protobuf contracts are duplicated between modules instead of being published as shared versioned artifacts.

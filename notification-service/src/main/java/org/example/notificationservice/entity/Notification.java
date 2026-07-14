@@ -1,14 +1,6 @@
 package org.example.notificationservice.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,7 +17,13 @@ import java.util.UUID;
         name = "notifications",
         indexes = {
                 @Index(name = "idx_notifications_recipient_created_at", columnList = "recipient_user_id, created_at"),
-                @Index(name = "idx_notifications_recipient_status", columnList = "recipient_user_id, status")
+                @Index(name = "idx_notifications_recipient_status", columnList = "recipient_user_id, status"),
+                @Index(name = "idx_notifications_source_event_id", columnList = "source_event_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "unc_source_id_recipient_id",  columnNames = {"source_event_id", "recipient_user_id"}
+                )
         }
 )
 @Getter
@@ -59,6 +57,12 @@ public class Notification {
 
     @Column(name = "resource_id")
     private UUID resourceId;
+
+    @Column(name = "source_event_id")
+    private UUID sourceEventId;
+
+    @Column(name = "source_topic", length = 120)
+    private String sourceTopic;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)

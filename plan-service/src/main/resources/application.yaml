@@ -23,3 +23,20 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+app:
+  kafka:
+    enabled: ${APP_KAFKA_ENABLED:true}
+    topics:
+      plan-events: plan.events
+
+routing:
+  grpc:
+    host: ${ROUTING_GRPC_HOST:localhost}
+    port: ${ROUTING_GRPC_PORT:9093}

@@ -6,6 +6,8 @@ import org.example.notificationservice.event.UserRegisteredEvent;
 import org.example.notificationservice.service.NotificationService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
@@ -22,17 +24,22 @@ public class UserEventConsumer {
     }
 
     @KafkaListener(topics = "${app.kafka.topics.auth-events}")
-    public void handleAuthEvent(String payload) {
+    public void handleAuthEvent(
+            String payload,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic
+    ) {
         UserRegisteredEvent event = objectMapper.readValue(payload, UserRegisteredEvent.class);
         if ("user.registered".equals(event.eventType())) {
-            handleUserRegistered(event);
+            handleUserRegistered(event, topic);
             return;
         }
         log.info("Ignored auth event type {}: {}", event.eventType(), payload);
     }
 
-    private void handleUserRegistered(UserRegisteredEvent event) {
+    private void handleUserRegistered(UserRegisteredEvent event, String topic) {
         notificationService.createFromEvent(
+                event.eventId(),
+                topic,
                 event.userId(),
                 event.userId(),
                 NotificationType.USER_REGISTERED,

@@ -77,6 +77,12 @@ spring:
                 - Path=/api/v1/notifications/**
               filters:
                 - JwtValidation
+            - id: routing-service
+              uri: ${routing.service.url}
+              predicates:
+                - Path=/api/v1/routes/**
+              filters:
+                - JwtValidation
 
 auth:
   service:
@@ -97,6 +103,10 @@ place:
 notification:
   service:
     url: http://localhost:8085
+
+routing:
+  service:
+    url: http://localhost:8086
 
 jwt:
   secret: "starlyvia-super-secret-key-starlyvia-super-secret-key"
