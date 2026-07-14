@@ -1,0 +1,16 @@
+server:
+  port: 8086
+
+grpc:
+  server:
+    port: ${GRPC_SERVER_PORT:9093}
+
+spring:
+  application:
+    name: routing-service
+
+routing:
+  provider:
+    openrouteservice:
+      api-key: ${OPENROUTESERVICE_API_KEY:eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjRhNDQxMTdjZjE3ZjRhN2E4MGZjZjRmMzhhYjc4NmJkIiwiaCI6Im11cm11cjY0In0=}
+      base-url: ${OPENROUTESERVICE_BASE_URL:https://api.openrouteservice.org}

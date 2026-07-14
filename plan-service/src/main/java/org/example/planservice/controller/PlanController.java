@@ -2,9 +2,12 @@ package org.example.planservice.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.planservice.client.TravelMode;
+import org.example.planservice.dto.ComputeRouteResponse;
 import org.example.planservice.dto.CreatePlanRequest;
 import org.example.planservice.dto.PlanResponse;
 import org.example.planservice.dto.UpdatePlanRequest;
+import org.example.planservice.service.PlanRouteService;
 import org.example.planservice.service.PlanService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,6 +30,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PlanController {
     private final PlanService planService;
+    private final PlanRouteService planRouteService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -42,6 +47,15 @@ public class PlanController {
             @PathVariable UUID id
     ) {
         return planService.getById(currentUserId, id);
+    }
+
+    @GetMapping("/{id}/route")
+    public ComputeRouteResponse computeRoute(
+            @RequestHeader("X-User-Id") UUID currentUserId,
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "DRIVE") TravelMode travelMode
+    ) {
+        return planRouteService.computeRoute(currentUserId, id, travelMode);
     }
 
     @GetMapping("/groups/{groupId}")

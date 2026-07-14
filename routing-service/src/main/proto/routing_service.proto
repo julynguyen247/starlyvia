@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package starlyvia.routing.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "RoutingServiceProto";
+option java_package = "org.example.routingservice.grpc.routing";
+
+service RouteCalculatorService {
+  rpc ComputeRoute(ComputeRouteRequest) returns (ComputeRouteResponse);
+}
+
+enum TravelMode {
+  TRAVEL_MODE_UNSPECIFIED = 0;
+  DRIVE = 1;
+  WALK = 2;
+  BICYCLE = 3;
+}
+
+message RouteStop {
+  string stop_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+}
+
+message ComputeRouteRequest {
+  TravelMode travel_mode = 1;
+  repeated RouteStop stops = 2;
+}
+
+message RouteCoordinate {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message RouteLeg {
+  int32 from_stop_index = 1;
+  int32 to_stop_index = 2;
+  string from_stop_id = 3;
+  string to_stop_id = 4;
+  int64 distance_meters = 5;
+  int64 duration_seconds = 6;
+}
+
+message ComputeRouteResponse {
+  string provider = 1;
+  TravelMode travel_mode = 2;
+  int64 distance_meters = 3;
+  int64 duration_seconds = 4;
+  repeated RouteCoordinate geometry = 5;
+  repeated RouteLeg legs = 6;
+}
