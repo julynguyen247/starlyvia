@@ -201,6 +201,7 @@ Set the external provider keys in your shell:
 ```bash
 export GOOGLE_PLACES_API_KEY=your-google-places-api-key
 export OPENROUTESERVICE_API_KEY=your-openrouteservice-api-key
+export JWT_SECRET=replace-this-with-a-long-random-secret
 ```
 
 Build and start the full stack:
@@ -367,9 +368,14 @@ Important environment variables:
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `JWT_SECRET` | Gateway, Auth | JWT signing and validation secret |
+| `JWT_EXPIRATION` | Auth | Token lifetime in milliseconds |
 | `GOOGLE_PLACES_API_KEY` | Place | Google Places authentication |
+| `GOOGLE_PLACES_BASE_URL` | Place | Override the Google Places base URL for tests |
 | `OPENROUTESERVICE_API_KEY` | Routing | OpenRouteService authentication |
 | `OPENROUTESERVICE_BASE_URL` | Routing | Override the routing provider URL for tests or self-hosting |
+| `SPRING_DATASOURCE_URL` | Auth, Group, Plan, Notification | JDBC connection URL |
+| `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | Auth, Group, Plan, Notification | Database credentials |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO`, `SPRING_JPA_SHOW_SQL` | Database-backed services | Override development JPA settings |
 | `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Auth, Group, Plan, Notification | Kafka broker addresses |
 | `AUTH_GRPC_HOST`, `AUTH_GRPC_PORT` | Group | Auth gRPC endpoint |
 | `GROUP_GRPC_HOST`, `GROUP_GRPC_PORT` | Plan | Group gRPC endpoint |

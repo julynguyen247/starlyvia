@@ -6,15 +6,15 @@ spring:
     name: auth-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/auth_db
-    username: starlyvia
-    password: starlyvia
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/auth_db}
+    username: ${SPRING_DATASOURCE_USERNAME:starlyvia}
+    password: ${SPRING_DATASOURCE_PASSWORD:starlyvia}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
     properties:
       hibernate:
         format_sql: true
@@ -26,8 +26,8 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 jwt:
-  secret: "starlyvia-super-secret-key-starlyvia-super-secret-key"
-  expiration: 36000000
+  secret: ${JWT_SECRET:starlyvia-super-secret-key-starlyvia-super-secret-key}
+  expiration: ${JWT_EXPIRATION:36000000}
 
 grpc:
   server:

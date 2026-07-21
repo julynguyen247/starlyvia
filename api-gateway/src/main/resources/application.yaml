@@ -109,4 +109,4 @@ routing:
     url: http://localhost:8086
 
 jwt:
-  secret: "starlyvia-super-secret-key-starlyvia-super-secret-key"
+  secret: ${JWT_SECRET:starlyvia-super-secret-key-starlyvia-super-secret-key}

@@ -12,5 +12,5 @@ spring:
 routing:
   provider:
     openrouteservice:
-      api-key: ${OPENROUTESERVICE_API_KEY:eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjRhNDQxMTdjZjE3ZjRhN2E4MGZjZjRmMzhhYjc4NmJkIiwiaCI6Im11cm11cjY0In0=}
+      api-key: ${OPENROUTESERVICE_API_KEY:}
       base-url: ${OPENROUTESERVICE_BASE_URL:https://api.openrouteservice.org}
