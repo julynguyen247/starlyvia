@@ -14,3 +14,14 @@ routing:
     openrouteservice:
       api-key: ${OPENROUTESERVICE_API_KEY:}
       base-url: ${OPENROUTESERVICE_BASE_URL:https://api.openrouteservice.org}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never

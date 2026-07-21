@@ -7,11 +7,12 @@ Starlyvia is a Java 25 and Spring Boot 4.1 microservice backend for collaborativ
 The repository is in good shape for local development:
 
 - All seven application modules compile and their test suites pass.
-- Docker Compose configuration is valid and every application image builds.
+- Docker Compose configuration is valid, every application image builds, and the full stack reaches a healthy state.
 - JWT authentication is enforced at the API gateway.
 - Internal synchronous calls use gRPC.
 - Domain events use Kafka, with retry and dead-letter handling in the notification consumer.
 - PostgreSQL data is separated by service.
+- Spring Boot Actuator exposes liveness, readiness, and health endpoints for every application.
 
 It is not production-ready yet. See [Known limitations](#known-limitations) for the remaining security, reliability, observability, and test-coverage work.
 
@@ -216,6 +217,14 @@ Inspect containers and logs:
 docker compose ps
 docker compose logs -f api-gateway
 ```
+
+Check the gateway health endpoint:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+All application containers also have Docker health checks. Compose waits for Kafka, databases, and required upstream services before starting dependants. Direct health endpoints are available on ports `8080` through `8086`; each response should contain `"status":"UP"`.
 
 Stop the stack:
 
@@ -430,6 +439,6 @@ docker compose build
 - Internal gRPC connections currently use plaintext and do not use service-to-service authentication.
 - Database schemas use Hibernate `ddl-auto=update`; production should use versioned migrations such as Flyway or Liquibase.
 - Kafka publishing is not transactional with database writes. A transactional outbox is recommended for reliable event delivery.
-- Application health checks, distributed tracing, metrics dashboards, centralized logs, and resilience policies are still missing.
+- Health checks are implemented, but distributed tracing, metrics dashboards, centralized logs, and broader resilience policies are still missing.
 - Test depth is uneven. Place, provider failure paths, Kafka integration, gateway-to-service integration, and full-stack end-to-end flows need broader coverage.
 - Protobuf contracts are duplicated between modules instead of being published as shared versioned artifacts.

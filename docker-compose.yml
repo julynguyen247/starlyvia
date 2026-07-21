@@ -100,7 +100,7 @@ services:
     container_name: starlyvia-auth-service
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
       auth-postgres:
         condition: service_healthy
     environment:
@@ -114,6 +114,12 @@ services:
     ports:
       - "8081:8081"
       - "9091:9091"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   group-service:
     build:
@@ -121,11 +127,11 @@ services:
     container_name: starlyvia-group-service
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
       group-postgres:
         condition: service_healthy
       auth-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://group-postgres:5432/group_db
       SPRING_DATASOURCE_USERNAME: starlyvia
@@ -137,6 +143,12 @@ services:
     ports:
       - "8082:8082"
       - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   plan-service:
     build:
@@ -144,13 +156,13 @@ services:
     container_name: starlyvia-plan-service
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
       plan-postgres:
         condition: service_healthy
       group-service:
-        condition: service_started
+        condition: service_healthy
       routing-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://plan-postgres:5432/plan_db
       SPRING_DATASOURCE_USERNAME: starlyvia
@@ -162,6 +174,12 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8083:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   place-service:
     build:
@@ -171,6 +189,12 @@ services:
       GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
     ports:
       - "8084:8084"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   notification-service:
     build:
@@ -178,7 +202,7 @@ services:
     container_name: starlyvia-notification-service
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
       notification-postgres:
         condition: service_healthy
     environment:
@@ -188,6 +212,12 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8085:8085"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8085/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   routing-service:
     build:
@@ -199,18 +229,30 @@ services:
     ports:
       - "8086:8086"
       - "9093:9093"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8086/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   api-gateway:
     build:
       context: ./api-gateway
     container_name: starlyvia-api-gateway
     depends_on:
-      - auth-service
-      - group-service
-      - plan-service
-      - place-service
-      - notification-service
-      - routing-service
+      auth-service:
+        condition: service_healthy
+      group-service:
+        condition: service_healthy
+      plan-service:
+        condition: service_healthy
+      place-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      routing-service:
+        condition: service_healthy
     environment:
       AUTH_SERVICE_URL: http://auth-service:8081
       GROUP_SERVICE_URL: http://group-service:8082
@@ -221,6 +263,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:-starlyvia-super-secret-key-starlyvia-super-secret-key}
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   kafka-data-v2:

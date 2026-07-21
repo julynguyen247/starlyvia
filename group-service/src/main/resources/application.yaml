@@ -39,3 +39,14 @@ app:
     enabled: ${APP_KAFKA_ENABLED:true}
     topics:
       group-events: group.events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never

@@ -30,3 +30,14 @@ app:
       auth-events: auth.events
       group-events: group.events
       plan-events: plan.events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
