@@ -1,6 +1,8 @@
 package org.example.placeservice.controller;
 
 import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -27,8 +29,8 @@ public class PlaceController {
     @GetMapping("/autocomplete")
     public List<PlaceSuggestionResponse> autocomplete(
             @RequestParam("query") @NotBlank String query,
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) @DecimalMin("-90.0") @DecimalMax("90.0") Double lat,
+            @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") Double lng,
             @RequestParam(required = false) @Min(1) @Max(10) Integer limit,
             @RequestParam(required = false) String sessionToken
     ) {
@@ -45,8 +47,8 @@ public class PlaceController {
 
     @GetMapping("/nearby")
     public List<PlaceDetailsResponse> nearby(
-            @RequestParam @NotNull Double lat,
-            @RequestParam @NotNull Double lng,
+            @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") Double lat,
+            @RequestParam @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double lng,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) @Min(1) @Max(50_000) Integer radiusMeters,
             @RequestParam(required = false) @Min(1) @Max(10) Integer limit
