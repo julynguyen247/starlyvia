@@ -148,7 +148,7 @@ Failed notification-consumer records are retried and then published to `<source-
 - Spring Security and JWT
 - Spring Data JPA and PostgreSQL 16
 - gRPC and Protocol Buffers
-- Apache Kafka
+- Apache Kafka 4.2.1 (official Docker image)
 - Google Places API
 - OpenRouteService Directions API
 - Docker Compose
