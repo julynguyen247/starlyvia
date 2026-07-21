@@ -17,6 +17,12 @@ public class PlaceService {
     private final GooglePlacesClient googlePlacesClient;
 
     public List<PlaceSuggestionResponse> autocomplete(String query, Double latitude, Double longitude, Integer limit, String sessionToken) {
+        if ((latitude == null) != (longitude == null)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Latitude and longitude must be supplied together"
+            );
+        }
         return googlePlacesClient.autocomplete(query, latitude, longitude, limit, sessionToken);
     }
 

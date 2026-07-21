@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Commits"
+  short_description: "Split changes into clean conventional commits"
+  default_prompt: "Use $feature-commits to inspect my worktree and create clean Conventional Commits."

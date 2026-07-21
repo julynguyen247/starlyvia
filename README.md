@@ -7,11 +7,12 @@ Starlyvia is a Java 25 and Spring Boot 4.1 microservice backend for collaborativ
 The repository is in good shape for local development:
 
 - All seven application modules compile and their test suites pass.
-- Docker Compose configuration is valid and every application image builds.
+- Docker Compose configuration is valid, every application image builds, and the full stack reaches a healthy state.
 - JWT authentication is enforced at the API gateway.
 - Internal synchronous calls use gRPC.
 - Domain events use Kafka, with retry and dead-letter handling in the notification consumer.
 - PostgreSQL data is separated by service.
+- Spring Boot Actuator exposes liveness, readiness, and health endpoints for every application.
 
 It is not production-ready yet. See [Known limitations](#known-limitations) for the remaining security, reliability, observability, and test-coverage work.
 
@@ -148,7 +149,7 @@ Failed notification-consumer records are retried and then published to `<source-
 - Spring Security and JWT
 - Spring Data JPA and PostgreSQL 16
 - gRPC and Protocol Buffers
-- Apache Kafka
+- Apache Kafka 4.2.1 (official Docker image)
 - Google Places API
 - OpenRouteService Directions API
 - Docker Compose
@@ -172,6 +173,18 @@ Failed notification-consumer records are retried and then published to `<source-
 
 Each application module owns its source code, Maven build, Dockerfile, configuration, and tests.
 
+## Repository Codex skills
+
+Project-specific Codex workflows are stored in `.agents/skills/` and can be invoked explicitly by name:
+
+| Skill | Purpose | Example invocation |
+| --- | --- | --- |
+| `feature-commits` | Split authorized worktree changes into focused Conventional Commits while preserving unrelated work. | `Use $feature-commits to organize and commit these changes.` |
+| `generate-readme` | Create or refresh `README.md` from the repository's code, configuration, tests, and manifests. | `Use $generate-readme to update the README from the current code.` |
+| `implementation` | Implement a named or next actionable item from `PLAN.md`, validate it, and update its status. | `Use $implementation to implement the next item in PLAN.md.` |
+
+The `implementation` skill requires a repository `PLAN.md`; this repository does not currently include one. Each skill follows `AGENTS.md`, preserves unrelated worktree changes, and reports the validation it actually ran.
+
 ## Prerequisites
 
 - JDK 25
@@ -189,6 +202,7 @@ Set the external provider keys in your shell:
 ```bash
 export GOOGLE_PLACES_API_KEY=your-google-places-api-key
 export OPENROUTESERVICE_API_KEY=your-openrouteservice-api-key
+export JWT_SECRET=replace-this-with-a-long-random-secret
 ```
 
 Build and start the full stack:
@@ -203,6 +217,14 @@ Inspect containers and logs:
 docker compose ps
 docker compose logs -f api-gateway
 ```
+
+Check the gateway health endpoint:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+All application containers also have Docker health checks. Compose waits for Kafka, databases, and required upstream services before starting dependants. Direct health endpoints are available on ports `8080` through `8086`; each response should contain `"status":"UP"`.
 
 Stop the stack:
 
@@ -355,9 +377,14 @@ Important environment variables:
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `JWT_SECRET` | Gateway, Auth | JWT signing and validation secret |
+| `JWT_EXPIRATION` | Auth | Token lifetime in milliseconds |
 | `GOOGLE_PLACES_API_KEY` | Place | Google Places authentication |
+| `GOOGLE_PLACES_BASE_URL` | Place | Override the Google Places base URL for tests |
 | `OPENROUTESERVICE_API_KEY` | Routing | OpenRouteService authentication |
 | `OPENROUTESERVICE_BASE_URL` | Routing | Override the routing provider URL for tests or self-hosting |
+| `SPRING_DATASOURCE_URL` | Auth, Group, Plan, Notification | JDBC connection URL |
+| `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | Auth, Group, Plan, Notification | Database credentials |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO`, `SPRING_JPA_SHOW_SQL` | Database-backed services | Override development JPA settings |
 | `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Auth, Group, Plan, Notification | Kafka broker addresses |
 | `AUTH_GRPC_HOST`, `AUTH_GRPC_PORT` | Group | Auth gRPC endpoint |
 | `GROUP_GRPC_HOST`, `GROUP_GRPC_PORT` | Plan | Group gRPC endpoint |
@@ -392,10 +419,10 @@ Latest local verification:
 | `auth-service` | 2 |
 | `group-service` | 6 |
 | `plan-service` | 5 |
-| `place-service` | 1 |
+| `place-service` | 6 |
 | `notification-service` | 7 |
 | `routing-service` | 6 |
-| **Total** | **33** |
+| **Total** | **38** |
 
 Build all Docker images:
 
@@ -412,6 +439,6 @@ docker compose build
 - Internal gRPC connections currently use plaintext and do not use service-to-service authentication.
 - Database schemas use Hibernate `ddl-auto=update`; production should use versioned migrations such as Flyway or Liquibase.
 - Kafka publishing is not transactional with database writes. A transactional outbox is recommended for reliable event delivery.
-- Application health checks, distributed tracing, metrics dashboards, centralized logs, and resilience policies are still missing.
-- Test depth is uneven. Place, provider failure paths, Kafka integration, gateway-to-service integration, and full-stack end-to-end flows need broader coverage.
+- Health checks are implemented, but distributed tracing, metrics dashboards, centralized logs, and broader resilience policies are still missing.
+- Test depth is uneven. Provider failure paths, Kafka integration, gateway-to-service integration, and full-stack end-to-end flows need broader coverage.
 - Protobuf contracts are duplicated between modules instead of being published as shared versioned artifacts.
