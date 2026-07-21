@@ -172,6 +172,18 @@ Failed notification-consumer records are retried and then published to `<source-
 
 Each application module owns its source code, Maven build, Dockerfile, configuration, and tests.
 
+## Repository Codex skills
+
+Project-specific Codex workflows are stored in `.agents/skills/` and can be invoked explicitly by name:
+
+| Skill | Purpose | Example invocation |
+| --- | --- | --- |
+| `feature-commits` | Split authorized worktree changes into focused Conventional Commits while preserving unrelated work. | `Use $feature-commits to organize and commit these changes.` |
+| `generate-readme` | Create or refresh `README.md` from the repository's code, configuration, tests, and manifests. | `Use $generate-readme to update the README from the current code.` |
+| `implementation` | Implement a named or next actionable item from `PLAN.md`, validate it, and update its status. | `Use $implementation to implement the next item in PLAN.md.` |
+
+The `implementation` skill requires a repository `PLAN.md`; this repository does not currently include one. Each skill follows `AGENTS.md`, preserves unrelated worktree changes, and reports the validation it actually ran.
+
 ## Prerequisites
 
 - JDK 25
