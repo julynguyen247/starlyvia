@@ -419,10 +419,10 @@ Latest local verification:
 | `auth-service` | 2 |
 | `group-service` | 6 |
 | `plan-service` | 5 |
-| `place-service` | 1 |
+| `place-service` | 6 |
 | `notification-service` | 7 |
 | `routing-service` | 6 |
-| **Total** | **33** |
+| **Total** | **38** |
 
 Build all Docker images:
 
@@ -440,5 +440,5 @@ docker compose build
 - Database schemas use Hibernate `ddl-auto=update`; production should use versioned migrations such as Flyway or Liquibase.
 - Kafka publishing is not transactional with database writes. A transactional outbox is recommended for reliable event delivery.
 - Health checks are implemented, but distributed tracing, metrics dashboards, centralized logs, and broader resilience policies are still missing.
-- Test depth is uneven. Place, provider failure paths, Kafka integration, gateway-to-service integration, and full-stack end-to-end flows need broader coverage.
+- Test depth is uneven. Provider failure paths, Kafka integration, gateway-to-service integration, and full-stack end-to-end flows need broader coverage.
 - Protobuf contracts are duplicated between modules instead of being published as shared versioned artifacts.
