@@ -412,7 +412,7 @@ for service in api-gateway auth-service group-service plan-service place-service
 done
 ```
 
-Latest local verification:
+Latest local verification (2026-07-14):
 
 | Module | Passing tests |
 | --- | ---: |
