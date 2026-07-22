@@ -393,7 +393,7 @@ Important environment variables:
 | `GRPC_SERVER_PORT` | Auth, Group, Routing | gRPC listen port |
 | `APP_KAFKA_ENABLED` | Event producers and consumers | Enable or disable Kafka integration |
 
-Without the required external API key, the place or route lookup endpoint returns `503` when running through Docker Compose.
+The place service fails fast during startup when `GEOAPIFY_API_KEY` is missing. A missing route-provider key is reported when route calculation is requested.
 
 ## Testing and build
 
