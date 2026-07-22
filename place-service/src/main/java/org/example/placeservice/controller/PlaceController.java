@@ -39,7 +39,7 @@ public class PlaceController {
 
     @GetMapping("/details")
     public PlaceDetailsResponse details(
-            @RequestParam(defaultValue = "GOOGLE") PlaceProvider provider,
+            @RequestParam(defaultValue = "GEOAPIFY") PlaceProvider provider,
             @RequestParam @NotBlank String providerPlaceId
     ) {
         return placeService.details(provider, providerPlaceId);

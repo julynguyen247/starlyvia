@@ -186,7 +186,7 @@ services:
       context: ./place-service
     container_name: starlyvia-place-service
     environment:
-      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
     ports:
       - "8084:8084"
     healthcheck:
