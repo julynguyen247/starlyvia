@@ -7,9 +7,10 @@ spring:
 
 place:
   provider:
-    google:
-      api-key: ${GOOGLE_PLACES_API_KEY:}
-      base-url: ${GOOGLE_PLACES_BASE_URL:https://places.googleapis.com/v1}
+    geoapify:
+      api-key: ${GEOAPIFY_API_KEY:}
+      base-url: ${GEOAPIFY_BASE_URL:https://api.geoapify.com}
+      nearby-categories: ${GEOAPIFY_NEARBY_CATEGORIES:accommodation,catering,commercial,entertainment,leisure,tourism}
 
 management:
   endpoints:

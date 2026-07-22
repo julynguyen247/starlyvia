@@ -35,7 +35,7 @@ flowchart LR
     PlanDB[(plan_db)]
     NotificationDB[(notification_db)]
     Kafka[(Kafka)]
-    Google[Google Places API]
+    Geoapify[Geoapify Places API]
     ORS[OpenRouteService API]
 
     Client -->|REST + JWT| Gateway
@@ -54,7 +54,7 @@ flowchart LR
     Group --> GroupDB
     Plan --> PlanDB
     Notification --> NotificationDB
-    Place -->|HTTPS| Google
+    Place -->|HTTPS| Geoapify
     Routing -->|HTTPS| ORS
 
     Auth -->|auth.events| Kafka
@@ -95,7 +95,7 @@ sequenceDiagram
 | `auth-service` | Registration, login, JWT issuance, user lookup | `8081` | `9091` | `auth_db`, Kafka |
 | `group-service` | Groups, members, and invitations | `8082` | `9092` | `group_db`, Auth gRPC, Kafka |
 | `plan-service` | Plans, ordered stops, access control, route orchestration | `8083` | — | `plan_db`, Group gRPC, Routing gRPC, Kafka |
-| `place-service` | Autocomplete, place details, nearby search | `8084` | — | Google Places API |
+| `place-service` | Autocomplete, place details, nearby search | `8084` | — | Geoapify Places API |
 | `notification-service` | Notification inbox and domain-event consumers | `8085` | — | `notification_db`, Kafka |
 | `routing-service` | Distance, duration, geometry, and route legs | `8086` | `9093` | OpenRouteService API |
 
@@ -150,7 +150,7 @@ Failed notification-consumer records are retried and then published to `<source-
 - Spring Data JPA and PostgreSQL 16
 - gRPC and Protocol Buffers
 - Apache Kafka 4.2.1 (official Docker image)
-- Google Places API
+- Geoapify Places API
 - OpenRouteService Directions API
 - Docker Compose
 - Maven Wrapper
@@ -190,7 +190,7 @@ The `implementation` skill requires a repository `PLAN.md`; this repository does
 - JDK 25
 - Docker Engine with Docker Compose
 - Bash-compatible shell
-- Google Places API key for place lookups
+- Geoapify API key for place lookups
 - OpenRouteService API key for route calculation
 
 A system Maven installation is optional because every module includes Maven Wrapper.
@@ -200,7 +200,7 @@ A system Maven installation is optional because every module includes Maven Wrap
 Set the external provider keys in your shell:
 
 ```bash
-export GOOGLE_PLACES_API_KEY=your-google-places-api-key
+export GEOAPIFY_API_KEY=your-geoapify-api-key
 export OPENROUTESERVICE_API_KEY=your-openrouteservice-api-key
 export JWT_SECRET=replace-this-with-a-long-random-secret
 ```
@@ -253,7 +253,7 @@ cd auth-service && ./mvnw spring-boot:run
 cd group-service && ./mvnw spring-boot:run
 cd routing-service && OPENROUTESERVICE_API_KEY=your-openrouteservice-api-key ./mvnw spring-boot:run
 cd plan-service && ./mvnw spring-boot:run
-cd place-service && GOOGLE_PLACES_API_KEY=your-google-places-api-key ./mvnw spring-boot:run
+cd place-service && GEOAPIFY_API_KEY=your-geoapify-api-key ./mvnw spring-boot:run
 cd notification-service && ./mvnw spring-boot:run
 cd api-gateway && ./mvnw spring-boot:run
 ```
@@ -378,8 +378,9 @@ Important environment variables:
 | --- | --- | --- |
 | `JWT_SECRET` | Gateway, Auth | JWT signing and validation secret |
 | `JWT_EXPIRATION` | Auth | Token lifetime in milliseconds |
-| `GOOGLE_PLACES_API_KEY` | Place | Google Places authentication |
-| `GOOGLE_PLACES_BASE_URL` | Place | Override the Google Places base URL for tests |
+| `GEOAPIFY_API_KEY` | Place | Geoapify authentication |
+| `GEOAPIFY_BASE_URL` | Place | Override the Geoapify base URL for tests |
+| `GEOAPIFY_NEARBY_CATEGORIES` | Place | Override the comma-separated nearby discovery categories |
 | `OPENROUTESERVICE_API_KEY` | Routing | OpenRouteService authentication |
 | `OPENROUTESERVICE_BASE_URL` | Routing | Override the routing provider URL for tests or self-hosting |
 | `SPRING_DATASOURCE_URL` | Auth, Group, Plan, Notification | JDBC connection URL |

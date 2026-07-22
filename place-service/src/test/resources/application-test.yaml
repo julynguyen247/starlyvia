@@ -1,5 +1,5 @@
 place:
   provider:
-    google:
+    geoapify:
       api-key: test-key
-      base-url: https://places.googleapis.com/v1
+      base-url: https://api.geoapify.test
