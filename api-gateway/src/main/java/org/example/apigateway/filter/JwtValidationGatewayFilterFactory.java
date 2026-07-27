@@ -54,9 +54,11 @@ public class JwtValidationGatewayFilterFactory
 
             ServerHttpRequest mutatedRequest = exchange.getRequest()
                     .mutate()
-                    .header("X-User-Id", userId)
-                    .header("X-User-Email", email)
-                    .header("X-User-Role", role)
+                    .headers(headers -> {
+                        headers.set("X-User-Id", userId);
+                        headers.set("X-User-Email", email);
+                        headers.set("X-User-Role", role);
+                    })
                     .build();
 
             return chain.filter(

@@ -5,8 +5,10 @@ import org.example.notificationservice.dto.NotificationResponse;
 import org.example.notificationservice.entity.Notification;
 import org.example.notificationservice.entity.NotificationStatus;
 import org.example.notificationservice.entity.NotificationType;
+import org.example.notificationservice.event.NotificationCreatedEvent;
 import org.example.notificationservice.mapper.NotificationMapper;
 import org.example.notificationservice.repository.NotificationRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +26,7 @@ import java.util.UUID;
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public NotificationResponse createFromEvent(
@@ -90,7 +93,9 @@ public class NotificationService {
                 .status(NotificationStatus.UNREAD)
                 .build();
         try {
-            return notificationMapper.toResponse(notificationRepository.save(notification));
+            NotificationResponse response = notificationMapper.toResponse(notificationRepository.saveAndFlush(notification));
+            applicationEventPublisher.publishEvent(new NotificationCreatedEvent(response));
+            return response;
         } catch (DataIntegrityViolationException ex) {
             if (sourceEventId == null) {
                 throw ex;

@@ -15,6 +15,7 @@ import reactor.test.StepVerifier;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -96,6 +97,30 @@ class JwtValidationGatewayFilterFactoryTests {
                 .isEqualTo("7f4b0f70-2e72-4d43-9bb8-9bf61ab56319");
         assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Role"))
                 .isEqualTo("USER");
+    }
+
+    @Test
+    void replacesClientSuppliedIdentityHeaders() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/v1/notifications/ws")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token())
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-User-Email", "attacker@example.com")
+                        .header("X-User-Role", "ADMIN")
+        );
+        AtomicReference<ServerWebExchange> forwardedExchange = new AtomicReference<>();
+
+        StepVerifier.create(filter().filter(exchange, chainExchange -> {
+                    forwardedExchange.set(chainExchange);
+                    return Mono.empty();
+                }))
+                .verifyComplete();
+
+        HttpHeaders headers = forwardedExchange.get().getRequest().getHeaders();
+        assertThat(headers.get("X-User-Id"))
+                .containsExactly("7f4b0f70-2e72-4d43-9bb8-9bf61ab56319");
+        assertThat(headers.get("X-User-Email")).containsExactly("user@example.com");
+        assertThat(headers.get("X-User-Role")).containsExactly("USER");
     }
 
     private GatewayFilter filter() {
