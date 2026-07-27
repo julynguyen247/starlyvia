@@ -42,6 +42,7 @@ class NotificationServiceTests {
         assertThat(response.recipientUserId()).isEqualTo(userId);
         assertThat(response.sourceEventId()).isEqualTo(eventId);
         assertThat(response.title()).isEqualTo("Invite");
+        assertThat(response.createdAt()).isNotNull();
         assertThat(notificationService.countUnread(userId)).isEqualTo(1);
         assertThat(notificationService.getMyNotifications(userId, firstPage()).getContent()).hasSize(1);
     }

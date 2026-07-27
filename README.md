@@ -38,12 +38,12 @@ flowchart LR
     Geoapify[Geoapify Places API]
     ORS[OpenRouteService API]
 
-    Client -->|REST + JWT| Gateway
+    Client -->|REST or WebSocket + JWT| Gateway
     Gateway -->|REST| Auth
     Gateway -->|REST| Group
     Gateway -->|REST| Plan
     Gateway -->|REST| Place
-    Gateway -->|REST| Notification
+    Gateway -->|REST + WebSocket| Notification
     Gateway -->|REST| Routing
 
     Group -.->|gRPC: user lookup| Auth
@@ -141,12 +141,19 @@ The `.proto` contracts are currently copied into both the client and server modu
 
 Failed notification-consumer records are retried and then published to `<source-topic>.DLT`.
 
+### Realtime notifications
+
+Authenticated native clients can connect through the gateway at `ws://localhost:8080/api/v1/notifications/ws` (or `wss://` in TLS environments) with the JWT in the `Authorization: Bearer <token>` handshake header. The gateway validates the token and forwards trusted identity headers to the notification service.
+
+After a Kafka event creates and commits a notification, the service sends the owning user's connected sessions a `NOTIFICATION_CREATED` message containing the normal notification response DTO. WebSocket delivery is best-effort; clients reconcile the paginated REST inbox and unread count after connecting or reconnecting.
+
 ## Technology stack
 
 - Java 25
 - Spring Boot 4.1
 - Spring Cloud Gateway
 - Spring Security and JWT
+- Spring WebSocket
 - Spring Data JPA and PostgreSQL 16
 - gRPC and Protocol Buffers
 - Apache Kafka 4.2.1 (official Docker image)
@@ -412,7 +419,7 @@ for service in api-gateway auth-service group-service plan-service place-service
 done
 ```
 
-Latest local verification (2026-07-14):
+Latest full-repository local verification before the realtime notification additions (2026-07-14):
 
 | Module | Passing tests |
 | --- | ---: |
@@ -435,6 +442,7 @@ docker compose build
 
 - The current Docker Compose setup is intended for development and exposes service and database ports to the host.
 - Downstream services trust gateway identity headers. Production deployment must prevent clients from bypassing the gateway and spoofing those headers.
+- Realtime WebSocket sessions are stored in one notification-service instance. Keep that service at one replica until notification events are fanned out through shared pub/sub infrastructure.
 - JWT secrets and database credentials in the repository are development defaults and must be replaced in deployed environments.
 - External provider keys must only come from environment variables or a secrets manager. Do not commit fallback keys to configuration files.
 - Internal gRPC connections currently use plaintext and do not use service-to-service authentication.

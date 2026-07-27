@@ -254,6 +254,7 @@ services:
       routing-service:
         condition: service_healthy
     environment:
+      NOTIFICATION_WEBSOCKET_URL: ws://notification-service:8085
       AUTH_SERVICE_URL: http://auth-service:8081
       GROUP_SERVICE_URL: http://group-service:8082
       PLAN_SERVICE_URL: http://plan-service:8083

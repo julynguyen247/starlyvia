@@ -71,6 +71,12 @@ spring:
                 - Path=/api/v1/places/**
               filters:
                 - JwtValidation
+            - id: notification-service-websocket
+              uri: ${notification.websocket.url}
+              predicates:
+                - Path=/api/v1/notifications/ws
+              filters:
+                - JwtValidation
             - id: notification-service
               uri: ${notification.service.url}
               predicates:
@@ -103,6 +109,8 @@ place:
 notification:
   service:
     url: http://localhost:8085
+  websocket:
+    url: ${NOTIFICATION_WEBSOCKET_URL:ws://localhost:8085}
 
 routing:
   service:
