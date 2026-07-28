@@ -29,7 +29,7 @@ class RoutingRedisCacheSerializationTests {
                         new RouteCoordinateResponse(10.77, 106.69),
                         new RouteCoordinateResponse(10.78, 106.70)
                 ),
-                List.of(new RouteLegResponse(0, 1, firstStopId, secondStopId, 1521, 420))
+                List.of(new RouteLegResponse(0, 1, firstStopId, secondStopId, 1521, 420, List.of()))
         );
         JacksonJsonRedisSerializer<ComputeRouteResponse> serializer =
                 new JacksonJsonRedisSerializer<>(objectMapper, ComputeRouteResponse.class);

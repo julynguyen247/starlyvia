@@ -7,6 +7,7 @@ import org.example.routingservice.dto.RouteStopRequest;
 import org.example.routingservice.grpc.routing.RouteCalculatorServiceGrpc;
 import org.example.routingservice.grpc.routing.RouteCoordinate;
 import org.example.routingservice.grpc.routing.RouteLeg;
+import org.example.routingservice.grpc.routing.RouteStep;
 import org.example.routingservice.grpc.routing.RouteStop;
 import org.example.routingservice.service.RoutingService;
 import org.springframework.stereotype.Component;
@@ -123,7 +124,18 @@ public class RouteCalculatorGrpcService extends RouteCalculatorServiceGrpc.Route
                                     .setFromStopIndex(leg.fromStopIndex())
                                     .setToStopIndex(leg.toStopIndex())
                                     .setDistanceMeters(leg.distanceMeters())
-                                    .setDurationSeconds(leg.durationSeconds());
+                                    .setDurationSeconds(leg.durationSeconds())
+                                    .addAllSteps(leg.steps().stream()
+                                            .map(step -> RouteStep.newBuilder()
+                                                    .setInstructionType(step.instructionType())
+                                                    .setInstruction(step.instruction())
+                                                    .setRoadName(step.roadName())
+                                                    .setDistanceMeters(step.distanceMeters())
+                                                    .setDurationSeconds(step.durationSeconds())
+                                                    .setGeometryStartIndex(step.geometryStartIndex())
+                                                    .setGeometryEndIndex(step.geometryEndIndex())
+                                                    .build())
+                                            .toList());
                             if (leg.fromStopId() != null) {
                                 builder.setFromStopId(leg.fromStopId().toString());
                             }

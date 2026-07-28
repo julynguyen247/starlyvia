@@ -14,7 +14,7 @@ public class RouteCacheKey {
     public String from(ComputeRouteRequest request) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            update(digest, "route-v1");
+            update(digest, "route-v2");
             update(digest, request.travelMode().name());
             for (RouteStopRequest stop : request.stops()) {
                 update(digest, stop.stopId() == null ? "" : stop.stopId().toString());

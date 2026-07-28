@@ -68,7 +68,7 @@ class RoutingRedisCacheFailureTests {
                         new RouteCoordinateResponse(10.77, 106.69),
                         new RouteCoordinateResponse(10.78, 106.70)
                 ),
-                List.of(new RouteLegResponse(0, 1, firstStopId, secondStopId, 1521, 420))
+                List.of(new RouteLegResponse(0, 1, firstStopId, secondStopId, 1521, 420, List.of()))
         );
         when(routingProvider.computeRoute(request)).thenReturn(response);
 

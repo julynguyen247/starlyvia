@@ -66,7 +66,22 @@ class OpenRouteServiceClientTests {
                               },
                               "segments": [{
                                 "distance": 1520.6,
-                                "duration": 420.4
+                                "duration": 420.4,
+                                "steps": [{
+                                  "distance": 800.2,
+                                  "duration": 220.1,
+                                  "type": 11,
+                                  "instruction": "Head northeast on Test Street",
+                                  "name": "Test Street",
+                                  "way_points": [0, 1]
+                                }, {
+                                  "distance": 720.4,
+                                  "duration": 200.3,
+                                  "type": 10,
+                                  "instruction": "Arrive at your destination",
+                                  "name": "",
+                                  "way_points": [1, 2]
+                                }]
                               }]
                             },
                             "geometry": {
@@ -94,6 +109,11 @@ class OpenRouteServiceClientTests {
             assertThat(leg.fromStopId()).isEqualTo(firstStopId);
             assertThat(leg.toStopId()).isEqualTo(secondStopId);
             assertThat(leg.distanceMeters()).isEqualTo(1521);
+            assertThat(leg.steps()).hasSize(2);
+            assertThat(leg.steps().getFirst().instruction()).isEqualTo("Head northeast on Test Street");
+            assertThat(leg.steps().getFirst().roadName()).isEqualTo("Test Street");
+            assertThat(leg.steps().getFirst().geometryStartIndex()).isZero();
+            assertThat(leg.steps().getFirst().geometryEndIndex()).isEqualTo(1);
         });
         server.verify();
     }
