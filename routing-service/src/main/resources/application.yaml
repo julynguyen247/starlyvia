@@ -9,6 +9,21 @@ spring:
   application:
     name: routing-service
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      connect-timeout: ${SPRING_DATA_REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+      repositories:
+        enabled: false
+
+app:
+  cache:
+    redis:
+      enabled: ${APP_ROUTING_CACHE_ENABLED:true}
+      route-ttl: ${APP_ROUTING_CACHE_TTL:30m}
+
 routing:
   provider:
     openrouteservice:
@@ -16,6 +31,9 @@ routing:
       base-url: ${OPENROUTESERVICE_BASE_URL:https://api.openrouteservice.org}
 
 management:
+  health:
+    redis:
+      enabled: ${APP_ROUTING_CACHE_ENABLED:true}
   endpoints:
     web:
       exposure:
@@ -24,4 +42,7 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState
       show-details: never

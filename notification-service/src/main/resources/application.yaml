@@ -24,14 +24,30 @@ spring:
     consumer:
       group-id: notification-service
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      connect-timeout: ${SPRING_DATA_REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+      repositories:
+        enabled: false
+
 app:
   kafka:
     topics:
       auth-events: auth.events
       group-events: group.events
       plan-events: plan.events
+  realtime:
+    redis:
+      enabled: ${APP_REALTIME_REDIS_ENABLED:true}
+      channel: ${APP_REALTIME_REDIS_CHANNEL:starlyvia.notifications.created.v1}
 
 management:
+  health:
+    redis:
+      enabled: ${APP_REALTIME_REDIS_ENABLED:true}
   endpoints:
     web:
       exposure:
@@ -40,4 +56,7 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,db
       show-details: never

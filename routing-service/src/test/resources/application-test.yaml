@@ -1,9 +1,3 @@
-place:
-  provider:
-    geoapify:
-      api-key: test-key
-      base-url: https://api.geoapify.test
-
 app:
   cache:
     redis:

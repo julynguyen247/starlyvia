@@ -35,6 +35,7 @@ flowchart LR
     PlanDB[(plan_db)]
     NotificationDB[(notification_db)]
     Kafka[(Kafka)]
+    Redis[(Redis)]
     Geoapify[Geoapify Places API]
     ORS[OpenRouteService API]
 
@@ -61,6 +62,9 @@ flowchart LR
     Group -->|group.events| Kafka
     Plan -->|plan.events| Kafka
     Kafka -->|consume events| Notification
+    Notification -->|publish + subscribe| Redis
+    Place -->|cache provider responses| Redis
+    Routing -->|cache route responses| Redis
 ```
 
 ### Plan route flow
@@ -95,15 +99,16 @@ sequenceDiagram
 | `auth-service` | Registration, login, JWT issuance, user lookup | `8081` | `9091` | `auth_db`, Kafka |
 | `group-service` | Groups, members, and invitations | `8082` | `9092` | `group_db`, Auth gRPC, Kafka |
 | `plan-service` | Plans, ordered stops, access control, route orchestration | `8083` | — | `plan_db`, Group gRPC, Routing gRPC, Kafka |
-| `place-service` | Autocomplete, place details, nearby search | `8084` | — | Geoapify Places API |
-| `notification-service` | Notification inbox and domain-event consumers | `8085` | — | `notification_db`, Kafka |
-| `routing-service` | Distance, duration, geometry, and route legs | `8086` | `9093` | OpenRouteService API |
+| `place-service` | Autocomplete, place details, nearby search | `8084` | — | Geoapify Places API, Redis cache |
+| `notification-service` | Notification inbox and domain-event consumers | `8085` | — | `notification_db`, Kafka, Redis Pub/Sub |
+| `routing-service` | Distance, duration, geometry, and route legs | `8086` | `9093` | OpenRouteService API, Redis cache |
 
 Infrastructure exposed by Docker Compose:
 
 | Component | Host port |
 | --- | ---: |
 | Kafka | `9094` |
+| Redis | `6379` |
 | Auth PostgreSQL | `5433` |
 | Group PostgreSQL | `5434` |
 | Plan PostgreSQL | `5435` |
@@ -145,7 +150,11 @@ Failed notification-consumer records are retried and then published to `<source-
 
 Authenticated native clients can connect through the gateway at `ws://localhost:8080/api/v1/notifications/ws` (or `wss://` in TLS environments) with the JWT in the `Authorization: Bearer <token>` handshake header. The gateway validates the token and forwards trusted identity headers to the notification service.
 
-After a Kafka event creates and commits a notification, the service sends the owning user's connected sessions a `NOTIFICATION_CREATED` message containing the normal notification response DTO. WebSocket delivery is best-effort; clients reconcile the paginated REST inbox and unread count after connecting or reconnecting.
+After a Kafka event creates and commits a notification, the service publishes a `NOTIFICATION_CREATED` message to Redis. Every notification-service replica subscribes to that channel and delivers the message to the owning user's locally connected sessions. WebSocket delivery is best-effort; clients reconcile the paginated REST inbox and unread count after connecting or reconnecting.
+
+### Provider response caching
+
+The place and routing services use Redis as a best-effort cache in front of their external providers. Place autocomplete responses expire after 2 minutes, nearby responses after 10 minutes, place details after 24 hours, and computed routes after 30 minutes. Cache keys include every provider input that affects the result. Redis failures are logged and bypassed, so requests continue directly to Geoapify or OpenRouteService.
 
 ## Technology stack
 
@@ -157,6 +166,7 @@ After a Kafka event creates and commits a notification, the service sends the ow
 - Spring Data JPA and PostgreSQL 16
 - gRPC and Protocol Buffers
 - Apache Kafka 4.2.1 (official Docker image)
+- Redis 7.4 Pub/Sub and provider-response caching
 - Geoapify Places API
 - OpenRouteService Directions API
 - Docker Compose
@@ -250,7 +260,7 @@ docker compose down -v
 Start the infrastructure first:
 
 ```bash
-docker compose up -d kafka auth-postgres group-postgres plan-postgres notification-postgres
+docker compose up -d kafka redis auth-postgres group-postgres plan-postgres notification-postgres
 ```
 
 Then run each application in a separate terminal:
@@ -394,6 +404,11 @@ Important environment variables:
 | `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | Auth, Group, Plan, Notification | Database credentials |
 | `SPRING_JPA_HIBERNATE_DDL_AUTO`, `SPRING_JPA_SHOW_SQL` | Database-backed services | Override development JPA settings |
 | `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Auth, Group, Plan, Notification | Kafka broker addresses |
+| `SPRING_DATA_REDIS_HOST`, `SPRING_DATA_REDIS_PORT` | Place, Notification, Routing | Shared Redis connection used for caching and realtime fan-out |
+| `APP_REALTIME_REDIS_ENABLED`, `APP_REALTIME_REDIS_CHANNEL` | Notification | Enable Redis fan-out and override its Pub/Sub channel |
+| `APP_PLACE_CACHE_ENABLED` | Place | Enable or disable Geoapify response caching |
+| `APP_PLACE_CACHE_AUTOCOMPLETE_TTL`, `APP_PLACE_CACHE_NEARBY_TTL`, `APP_PLACE_CACHE_DETAILS_TTL` | Place | Override Geoapify cache TTLs |
+| `APP_ROUTING_CACHE_ENABLED`, `APP_ROUTING_CACHE_TTL` | Routing | Enable route caching and override its TTL |
 | `AUTH_GRPC_HOST`, `AUTH_GRPC_PORT` | Group | Auth gRPC endpoint |
 | `GROUP_GRPC_HOST`, `GROUP_GRPC_PORT` | Plan | Group gRPC endpoint |
 | `ROUTING_GRPC_HOST`, `ROUTING_GRPC_PORT` | Plan | Routing gRPC endpoint |
@@ -442,7 +457,7 @@ docker compose build
 
 - The current Docker Compose setup is intended for development and exposes service and database ports to the host.
 - Downstream services trust gateway identity headers. Production deployment must prevent clients from bypassing the gateway and spoofing those headers.
-- Realtime WebSocket sessions are stored in one notification-service instance. Keep that service at one replica until notification events are fanned out through shared pub/sub infrastructure.
+- Realtime WebSocket delivery uses best-effort Redis Pub/Sub and has no replay. Clients must reconcile the REST inbox after connecting or reconnecting.
 - JWT secrets and database credentials in the repository are development defaults and must be replaced in deployed environments.
 - External provider keys must only come from environment variables or a secrets manager. Do not commit fallback keys to configuration files.
 - Internal gRPC connections currently use plaintext and do not use service-to-service authentication.

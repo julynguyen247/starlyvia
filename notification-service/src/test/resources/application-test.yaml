@@ -15,3 +15,6 @@ spring:
 app:
   kafka:
     enabled: false
+  realtime:
+    redis:
+      enabled: false
