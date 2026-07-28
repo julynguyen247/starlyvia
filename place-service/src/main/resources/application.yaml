@@ -5,6 +5,23 @@ spring:
   application:
     name: place-service
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      connect-timeout: ${SPRING_DATA_REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+      repositories:
+        enabled: false
+
+app:
+  cache:
+    redis:
+      enabled: ${APP_PLACE_CACHE_ENABLED:true}
+      autocomplete-ttl: ${APP_PLACE_CACHE_AUTOCOMPLETE_TTL:2m}
+      nearby-ttl: ${APP_PLACE_CACHE_NEARBY_TTL:10m}
+      details-ttl: ${APP_PLACE_CACHE_DETAILS_TTL:24h}
+
 place:
   provider:
     geoapify:
@@ -13,6 +30,9 @@ place:
       nearby-categories: ${GEOAPIFY_NEARBY_CATEGORIES:accommodation,catering,commercial,entertainment,leisure,tourism}
 
 management:
+  health:
+    redis:
+      enabled: ${APP_PLACE_CACHE_ENABLED:true}
   endpoints:
     web:
       exposure:
@@ -21,4 +41,7 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState
       show-details: never

@@ -3,3 +3,13 @@ place:
     geoapify:
       api-key: test-key
       base-url: https://api.geoapify.test
+
+app:
+  cache:
+    redis:
+      enabled: false
+
+management:
+  health:
+    redis:
+      enabled: false
