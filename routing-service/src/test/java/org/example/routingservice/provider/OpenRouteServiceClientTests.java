@@ -51,7 +51,7 @@ class OpenRouteServiceClientTests {
                             [106.69, 10.77],
                             [106.7, 10.78]
                           ],
-                          "instructions": false
+                          "instructions": true
                         }
                         """))
                 .andRespond(withSuccess("""

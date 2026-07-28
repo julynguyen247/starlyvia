@@ -61,7 +61,7 @@ public class OpenRouteServiceClient implements RoutingProvider {
                 .toList();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("coordinates", coordinates);
-        body.put("instructions", false);
+        body.put("instructions", true);
         return body;
     }
 
