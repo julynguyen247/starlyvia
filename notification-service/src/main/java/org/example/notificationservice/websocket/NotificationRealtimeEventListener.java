@@ -10,13 +10,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 @RequiredArgsConstructor
 public class NotificationRealtimeEventListener {
-    private final NotificationWebSocketHandler notificationWebSocketHandler;
+    private final NotificationRealtimePublisher notificationRealtimePublisher;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onNotificationCreated(NotificationCreatedEvent event) {
-        notificationWebSocketHandler.sendToUser(
-                event.notification().recipientUserId(),
-                NotificationRealtimeMessage.created(event.notification())
-        );
+        notificationRealtimePublisher.publish(NotificationRealtimeMessage.created(event.notification()));
     }
 }
