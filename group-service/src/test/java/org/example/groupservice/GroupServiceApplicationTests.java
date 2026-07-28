@@ -2,9 +2,12 @@ package org.example.groupservice;
 
 import org.example.groupservice.client.UserClient;
 import org.example.groupservice.dto.CreateGroupRequest;
+import org.example.groupservice.dto.GroupJoinCodeResponse;
+import org.example.groupservice.dto.GroupJoinPreviewResponse;
 import org.example.groupservice.entity.*;
 import org.example.groupservice.event.DomainEventPublisher;
 import org.example.groupservice.repository.GroupInvitationRepository;
+import org.example.groupservice.repository.GroupJoinCodeRepository;
 import org.example.groupservice.repository.GroupMemberRepository;
 import org.example.groupservice.repository.PlanGroupRepository;
 import org.example.groupservice.service.GroupService;
@@ -17,6 +20,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +42,9 @@ class GroupServiceApplicationTests {
     @Autowired
     private GroupInvitationRepository groupInvitationRepository;
 
+    @Autowired
+    private GroupJoinCodeRepository groupJoinCodeRepository;
+
     @TestConfiguration
     static class UserClientTestConfig {
         @Bean
@@ -56,6 +63,7 @@ class GroupServiceApplicationTests {
 
     @BeforeEach
     void cleanDatabase() {
+        groupJoinCodeRepository.deleteAll();
         groupInvitationRepository.deleteAll();
         groupMemberRepository.deleteAll();
         planGroupRepository.deleteAll();
@@ -118,6 +126,73 @@ class GroupServiceApplicationTests {
     }
 
     @Test
+    void ownerCanCreateJoinCodeAndTravelerCanJoin() {
+        UUID ownerId = UUID.randomUUID();
+        UUID travelerId = UUID.randomUUID();
+        PlanGroup group = groupService.create(ownerId, createGroupRequest("Beach Trip", GroupType.FRIENDS));
+
+        GroupJoinCodeResponse joinCode = groupService.getOrCreateJoinCode(ownerId, group.getId());
+        GroupJoinPreviewResponse preview = groupService.previewJoinCode(travelerId, joinCode.token());
+        GroupMember member = groupService.joinByCode(travelerId, joinCode.token());
+
+        assertThat(preview.groupId()).isEqualTo(group.getId());
+        assertThat(preview.groupName()).isEqualTo("Beach Trip");
+        assertThat(preview.alreadyMember()).isFalse();
+        assertThat(member.getUserId()).isEqualTo(travelerId);
+        assertThat(member.getRole()).isEqualTo(GroupRole.MEMBER);
+    }
+
+    @Test
+    void repeatedJoinCodeAndJoinAreIdempotent() {
+        UUID ownerId = UUID.randomUUID();
+        UUID travelerId = UUID.randomUUID();
+        PlanGroup group = groupService.create(ownerId, createGroupRequest("City Trip", GroupType.FAMILY));
+
+        GroupJoinCodeResponse firstCode = groupService.getOrCreateJoinCode(ownerId, group.getId());
+        GroupJoinCodeResponse secondCode = groupService.getOrCreateJoinCode(ownerId, group.getId());
+        GroupMember firstJoin = groupService.joinByCode(travelerId, firstCode.token());
+        GroupMember secondJoin = groupService.joinByCode(travelerId, firstCode.token());
+
+        assertThat(secondCode.token()).isEqualTo(firstCode.token());
+        assertThat(secondJoin.getId()).isEqualTo(firstJoin.getId());
+        assertThat(groupMemberRepository.countByGroupId(group.getId())).isEqualTo(2);
+    }
+
+    @Test
+    void expiredJoinCodeCannotBeUsed() {
+        UUID ownerId = UUID.randomUUID();
+        PlanGroup group = groupService.create(ownerId, createGroupRequest("Old Trip", GroupType.CUSTOM));
+        GroupJoinCodeResponse response = groupService.getOrCreateJoinCode(ownerId, group.getId());
+        GroupJoinCode joinCode = groupJoinCodeRepository.findByToken(response.token()).orElseThrow();
+        joinCode.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+        groupJoinCodeRepository.save(joinCode);
+
+        assertThatThrownBy(() -> groupService.previewJoinCode(UUID.randomUUID(), response.token()))
+                .hasMessageContaining("Join code has expired");
+    }
+
+    @Test
+    void regularMemberCannotCreateJoinCode() {
+        UUID ownerId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        PlanGroup group = groupService.create(ownerId, createGroupRequest("Private Trip", GroupType.FRIENDS));
+        GroupInvitation invitation = groupService.invite(ownerId, group.getId(), memberId);
+        groupService.acceptInvitation(memberId, invitation.getId());
+
+        assertThatThrownBy(() -> groupService.getOrCreateJoinCode(memberId, group.getId()))
+                .hasMessageContaining("Only group owners or admins");
+    }
+
+    @Test
+    void soloTripCannotCreateJoinCode() {
+        UUID ownerId = UUID.randomUUID();
+        PlanGroup group = groupService.create(ownerId, createGroupRequest("Solo Trip", GroupType.SOLO));
+
+        assertThatThrownBy(() -> groupService.getOrCreateJoinCode(ownerId, group.getId()))
+                .hasMessageContaining("Solo trips cannot accept members");
+    }
+
+    @Test
     void cannotInviteMissingUser() {
         UserClient missingUserClient = userId -> false;
         DomainEventPublisher eventPublisher = (topic, key, payload) -> {
@@ -126,6 +201,7 @@ class GroupServiceApplicationTests {
                 planGroupRepository,
                 groupMemberRepository,
                 groupInvitationRepository,
+                groupJoinCodeRepository,
                 missingUserClient,
                 eventPublisher
         );

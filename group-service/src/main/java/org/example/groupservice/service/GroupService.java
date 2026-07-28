@@ -3,10 +3,13 @@ package org.example.groupservice.service;
 import lombok.RequiredArgsConstructor;
 import org.example.groupservice.client.UserClient;
 import org.example.groupservice.dto.CreateGroupRequest;
+import org.example.groupservice.dto.GroupJoinCodeResponse;
+import org.example.groupservice.dto.GroupJoinPreviewResponse;
 import org.example.groupservice.entity.*;
 import org.example.groupservice.event.DomainEventPublisher;
 import org.example.groupservice.event.GroupEvent;
 import org.example.groupservice.repository.GroupInvitationRepository;
+import org.example.groupservice.repository.GroupJoinCodeRepository;
 import org.example.groupservice.repository.GroupMemberRepository;
 import org.example.groupservice.repository.PlanGroupRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,10 +26,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GroupService {
     private static final int GROUP_EVENT_VERSION = 1;
+    private static final int JOIN_CODE_VALID_DAYS = 7;
 
     private final PlanGroupRepository planGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final GroupInvitationRepository groupInvitationRepository;
+    private final GroupJoinCodeRepository groupJoinCodeRepository;
     private final UserClient userClient;
     private final DomainEventPublisher eventPublisher;
 
@@ -67,6 +72,70 @@ public class GroupService {
     public List<GroupMember> getMembers(UUID currentUserId, UUID groupId) {
         assertMember(groupId, currentUserId);
         return groupMemberRepository.findByGroupId(groupId);
+    }
+
+    @Transactional
+    public GroupJoinCodeResponse getOrCreateJoinCode(UUID currentUserId, UUID groupId) {
+        PlanGroup group = findGroup(groupId);
+        assertAdmin(groupId, currentUserId);
+        if (group.getType() == GroupType.SOLO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo trips cannot accept members");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        GroupJoinCode joinCode = groupJoinCodeRepository.findByGroupId(groupId)
+                .orElseGet(() -> GroupJoinCode.builder()
+                        .group(group)
+                        .createdBy(currentUserId)
+                        .build());
+
+        if (joinCode.getToken() == null
+                || joinCode.getExpiresAt() == null
+                || !joinCode.getExpiresAt().isAfter(now)) {
+            joinCode.setToken(UUID.randomUUID());
+            joinCode.setCreatedBy(currentUserId);
+            joinCode.setExpiresAt(now.plusDays(JOIN_CODE_VALID_DAYS));
+            joinCode = groupJoinCodeRepository.save(joinCode);
+        }
+
+        return toJoinCodeResponse(joinCode);
+    }
+
+    @Transactional(readOnly = true)
+    public GroupJoinPreviewResponse previewJoinCode(UUID currentUserId, UUID token) {
+        GroupJoinCode joinCode = findActiveJoinCode(token);
+        PlanGroup group = joinCode.getGroup();
+        return new GroupJoinPreviewResponse(
+                group.getId(),
+                group.getName(),
+                group.getDescription(),
+                group.getType(),
+                joinCode.getExpiresAt(),
+                groupMemberRepository.existsByGroupIdAndUserId(group.getId(), currentUserId)
+        );
+    }
+
+    @Transactional
+    public GroupMember joinByCode(UUID currentUserId, UUID token) {
+        GroupJoinCode joinCode = findActiveJoinCode(token);
+        PlanGroup group = joinCode.getGroup();
+        UUID groupId = group.getId();
+
+        GroupMember existingMember = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
+                .orElse(null);
+        if (existingMember != null) {
+            return existingMember;
+        }
+
+        GroupMember member = groupMemberRepository.save(GroupMember.builder()
+                .group(group)
+                .userId(currentUserId)
+                .role(GroupRole.MEMBER)
+                .build());
+        groupInvitationRepository.findByGroupIdAndInviteeId(groupId, currentUserId)
+                .ifPresent(invitation -> invitation.setStatus(GroupInvitationStatus.ACCEPTED));
+        publishGroupEvent("group.member.added", groupId, currentUserId, currentUserId);
+        return member;
     }
 
     @Transactional
@@ -171,6 +240,24 @@ public class GroupService {
     private GroupInvitation findInvitation(UUID invitationId) {
         return groupInvitationRepository.findById(invitationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group invitation not found"));
+    }
+
+    private GroupJoinCode findActiveJoinCode(UUID token) {
+        GroupJoinCode joinCode = groupJoinCodeRepository.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Join code not found"));
+        if (!joinCode.getExpiresAt().isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Join code has expired");
+        }
+        return joinCode;
+    }
+
+    private GroupJoinCodeResponse toJoinCodeResponse(GroupJoinCode joinCode) {
+        return new GroupJoinCodeResponse(
+                joinCode.getToken(),
+                joinCode.getGroup().getId(),
+                joinCode.getGroup().getName(),
+                joinCode.getExpiresAt()
+        );
     }
 
     private void assertMember(UUID groupId, UUID userId) {
