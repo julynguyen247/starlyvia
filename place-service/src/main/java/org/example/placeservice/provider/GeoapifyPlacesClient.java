@@ -25,12 +25,14 @@ import java.util.Map;
 public class GeoapifyPlacesClient implements PlaceProviderClient {
     private static final int DEFAULT_LIMIT = 8;
     private static final int DEFAULT_VIEWPORT_LIMIT = 80;
+    private static final int MAX_PROVIDER_VIEWPORT_LIMIT = 500;
+    private static final int MAX_VIEWPORT_LIMIT = 1_000;
     private static final int DEFAULT_RADIUS_METERS = 5_000;
     private static final List<String> VIEWPORT_CATEGORY_GROUPS = List.of(
-            "catering,commercial",
-            "tourism,entertainment,leisure,sport,religion",
-            "service,education,healthcare,public_transport,parking,rental,childcare",
-            "accommodation"
+            "catering",
+            "commercial",
+            "tourism,entertainment,leisure,sport,religion,accommodation",
+            "service,education,healthcare,public_transport,parking,rental,childcare"
     );
     private final RestClient restClient;
     private final PlaceProviderProperties properties;
@@ -129,13 +131,23 @@ public class GeoapifyPlacesClient implements PlaceProviderClient {
         Map<String, PlaceDetailsResponse> places = new LinkedHashMap<>();
 
         for (String categories : categoryGroups) {
-            UriComponentsBuilder uri = endpoint("/v2/places")
-                    .queryParam("categories", categories)
-                    .queryParam("filter", "rect:" + west + "," + north + "," + east + "," + south)
-                    .queryParam("bias", "proximity:" + centerLongitude + "," + centerLatitude)
-                    .queryParam("limit", StringUtils.hasText(type) ? resultLimit : groupLimit);
-            for (PlaceDetailsResponse place : mapPlaces(get(uri))) {
-                places.putIfAbsent(place.providerPlaceId(), place);
+            int providerLimit = StringUtils.hasText(type)
+                    ? Math.min(resultLimit, MAX_PROVIDER_VIEWPORT_LIMIT)
+                    : Math.min(groupLimit, MAX_PROVIDER_VIEWPORT_LIMIT);
+            List<ViewportBounds> viewports = StringUtils.hasText(type) && resultLimit > MAX_PROVIDER_VIEWPORT_LIMIT
+                    ? splitViewport(west, south, east, north)
+                    : List.of(new ViewportBounds(west, south, east, north));
+
+            for (ViewportBounds viewport : viewports) {
+                UriComponentsBuilder uri = endpoint("/v2/places")
+                        .queryParam("categories", categories)
+                        .queryParam("conditions", "named")
+                        .queryParam("filter", "rect:" + viewport.west() + "," + viewport.north() + "," + viewport.east() + "," + viewport.south())
+                        .queryParam("bias", "proximity:" + centerLongitude + "," + centerLatitude)
+                        .queryParam("limit", providerLimit);
+                for (PlaceDetailsResponse place : mapPlaces(get(uri))) {
+                    places.putIfAbsent(place.providerPlaceId(), place);
+                }
             }
         }
 
@@ -234,7 +246,18 @@ public class GeoapifyPlacesClient implements PlaceProviderClient {
         if (limit == null) {
             return DEFAULT_VIEWPORT_LIMIT;
         }
-        return Math.max(1, Math.min(limit, 100));
+        return Math.max(1, Math.min(limit, MAX_VIEWPORT_LIMIT));
+    }
+
+    private List<ViewportBounds> splitViewport(double west, double south, double east, double north) {
+        double middleLongitude = (west + east) / 2;
+        return List.of(
+                new ViewportBounds(west, south, middleLongitude, north),
+                new ViewportBounds(middleLongitude, south, east, north)
+        );
+    }
+
+    private record ViewportBounds(double west, double south, double east, double north) {
     }
 
     private void assertConfigured() {

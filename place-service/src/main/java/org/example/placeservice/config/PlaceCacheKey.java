@@ -52,7 +52,7 @@ public class PlaceCacheKey {
             Integer limit
     ) {
         return digest(
-                "viewport-v3",
+                "viewport-v6",
                 normalizedNumber(west),
                 normalizedNumber(south),
                 normalizedNumber(east),

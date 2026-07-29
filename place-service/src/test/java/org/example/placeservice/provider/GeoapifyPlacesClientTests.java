@@ -172,6 +172,7 @@ class GeoapifyPlacesClientTests {
         server.expect(requestTo(startsWith("https://places.test/v2/places?")))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(queryParam("categories", "commercial"))
+                .andExpect(queryParam("conditions", "named"))
                 .andExpect(queryParam("filter", "rect:106.68,10.79,106.72,10.75"))
                 .andExpect(queryParam("bias", "proximity:106.7,10.77"))
                 .andExpect(queryParam("limit", "100"))
@@ -211,21 +212,54 @@ class GeoapifyPlacesClientTests {
     }
 
     @Test
+    void splitsLargeCategoryRequestsAtTheProviderLimit() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        GeoapifyPlacesClient client = new GeoapifyPlacesClient(builder.build(), properties("test-key"));
+
+        server.expect(requestTo(startsWith("https://places.test/v2/places?")))
+                .andExpect(queryParam("categories", "catering.cafe"))
+                .andExpect(queryParam("filter", "rect:106.68,10.79,106.7,10.75"))
+                .andExpect(queryParam("limit", "500"))
+                .andRespond(withSuccess(placeResponse("cafe-west", "West Cafe", 106.69), MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(startsWith("https://places.test/v2/places?")))
+                .andExpect(queryParam("categories", "catering.cafe"))
+                .andExpect(queryParam("filter", "rect:106.7,10.79,106.72,10.75"))
+                .andExpect(queryParam("limit", "500"))
+                .andRespond(withSuccess(placeResponse("cafe-east", "East Cafe", 106.71), MediaType.APPLICATION_JSON));
+
+        List<PlaceDetailsResponse> result = client.viewport(
+                106.68,
+                10.75,
+                106.72,
+                10.79,
+                "catering.cafe",
+                1_000
+        );
+
+        assertThat(result).extracting(PlaceDetailsResponse::providerPlaceId)
+                .containsExactly("cafe-west", "cafe-east");
+        server.verify();
+    }
+
+    @Test
     void balancesDefaultViewportPlacesAcrossCategoryGroups() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         GeoapifyPlacesClient client = new GeoapifyPlacesClient(builder.build(), properties("test-key"));
         List<String> groups = List.of(
-                "catering,commercial",
-                "tourism,entertainment,leisure,sport,religion",
-                "service,education,healthcare,public_transport,parking,rental,childcare",
-                "accommodation"
+                "catering",
+                "commercial",
+                "tourism,entertainment,leisure,sport,religion,accommodation",
+                "service,education,healthcare,public_transport,parking,rental,childcare"
         );
 
         for (int index = 0; index < groups.size(); index++) {
             int placeNumber = index + 1;
             server.expect(requestTo(startsWith("https://places.test/v2/places?")))
                     .andExpect(queryParam("categories", groups.get(index)))
+                    .andExpect(queryParam("conditions", "named"))
                     .andExpect(queryParam("limit", "2"))
                     .andRespond(withSuccess("""
                             {
@@ -256,6 +290,23 @@ class GeoapifyPlacesClientTests {
         assertThatThrownBy(() -> client.autocomplete("museum", null, null, null, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Geoapify API key is not configured");
+    }
+
+    private String placeResponse(String placeId, String name, double longitude) {
+        return """
+                {
+                  "features": [{
+                    "properties": {
+                      "place_id": "%s",
+                      "name": "%s",
+                      "formatted": "Test address",
+                      "lat": 10.77,
+                      "lon": %s,
+                      "categories": ["catering.cafe"]
+                    }
+                  }]
+                }
+                """.formatted(placeId, name, longitude);
     }
 
     @Test

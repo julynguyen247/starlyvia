@@ -62,8 +62,8 @@ public class PlaceController {
             @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") Double south,
             @RequestParam @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double east,
             @RequestParam @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") Double north,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) @Min(1) @Max(100) Integer limit
+            @RequestParam @NotBlank String type,
+            @RequestParam(required = false) @Min(1) @Max(1_000) Integer limit
     ) {
         return placeService.viewport(west, south, east, north, type, limit);
     }
