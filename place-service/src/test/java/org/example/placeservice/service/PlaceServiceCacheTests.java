@@ -94,7 +94,8 @@ class PlaceServiceCacheTests {
                 null,
                 null,
                 null,
-                null
+                null,
+                List.of()
         );
     }
 

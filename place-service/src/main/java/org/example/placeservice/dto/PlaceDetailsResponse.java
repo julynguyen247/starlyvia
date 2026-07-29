@@ -1,5 +1,7 @@
 package org.example.placeservice.dto;
 
+import java.util.List;
+
 public record PlaceDetailsResponse(
         PlaceProvider provider,
         String providerPlaceId,
@@ -11,6 +13,7 @@ public record PlaceDetailsResponse(
         Double rating,
         Integer ratingCount,
         String websiteUrl,
-        String phoneNumber
+        String phoneNumber,
+        List<String> categories
 ) {
 }

@@ -3,6 +3,7 @@ package org.example.routingservice.grpcserver;
 import io.grpc.stub.StreamObserver;
 import org.example.routingservice.dto.RouteCoordinateResponse;
 import org.example.routingservice.dto.RouteLegResponse;
+import org.example.routingservice.dto.RouteStepResponse;
 import org.example.routingservice.dto.TravelMode;
 import org.example.routingservice.grpc.routing.ComputeRouteRequest;
 import org.example.routingservice.grpc.routing.ComputeRouteResponse;
@@ -44,7 +45,16 @@ class RouteCalculatorGrpcServiceTests {
                                 firstStopId,
                                 secondStopId,
                                 1521,
-                                420
+                                420,
+                                List.of(new RouteStepResponse(
+                                        11,
+                                        "Head northeast on Test Street",
+                                        "Test Street",
+                                        1521,
+                                        420,
+                                        0,
+                                        1
+                                ))
                         ))
                 );
         when(routingService.computeRoute(org.mockito.ArgumentMatchers.any()))
@@ -75,6 +85,8 @@ class RouteCalculatorGrpcServiceTests {
         assertThat(response.get().getDistanceMeters()).isEqualTo(1521);
         assertThat(response.get().getGeometryList()).hasSize(2);
         assertThat(response.get().getLegs(0).getFromStopId()).isEqualTo(firstStopId.toString());
+        assertThat(response.get().getLegs(0).getSteps(0).getInstruction())
+                .isEqualTo("Head northeast on Test Street");
 
         ArgumentCaptor<org.example.routingservice.dto.ComputeRouteRequest> captor =
                 ArgumentCaptor.forClass(org.example.routingservice.dto.ComputeRouteRequest.class);

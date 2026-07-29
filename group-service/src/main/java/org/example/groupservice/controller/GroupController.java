@@ -3,6 +3,8 @@ package org.example.groupservice.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.groupservice.dto.CreateGroupRequest;
+import org.example.groupservice.dto.GroupJoinCodeResponse;
+import org.example.groupservice.dto.GroupJoinPreviewResponse;
 import org.example.groupservice.dto.InviteGroupMemberRequest;
 import org.example.groupservice.entity.GroupInvitation;
 import org.example.groupservice.entity.GroupMember;
@@ -48,6 +50,39 @@ public class GroupController {
             @PathVariable UUID groupId
     ) {
         return groupService.getMembers(currentUserId, groupId);
+    }
+
+    @DeleteMapping("/{groupId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @RequestHeader("X-User-Id") UUID currentUserId,
+            @PathVariable UUID groupId
+    ) {
+        groupService.delete(currentUserId, groupId);
+    }
+
+    @PostMapping("/{groupId}/join-code")
+    public GroupJoinCodeResponse getOrCreateJoinCode(
+            @RequestHeader("X-User-Id") UUID currentUserId,
+            @PathVariable UUID groupId
+    ) {
+        return groupService.getOrCreateJoinCode(currentUserId, groupId);
+    }
+
+    @GetMapping("/join-code/{token}")
+    public GroupJoinPreviewResponse previewJoinCode(
+            @RequestHeader("X-User-Id") UUID currentUserId,
+            @PathVariable UUID token
+    ) {
+        return groupService.previewJoinCode(currentUserId, token);
+    }
+
+    @PostMapping("/join-code/{token}/accept")
+    public GroupMember joinByCode(
+            @RequestHeader("X-User-Id") UUID currentUserId,
+            @PathVariable UUID token
+    ) {
+        return groupService.joinByCode(currentUserId, token);
     }
 
     @PostMapping("/{groupId}/invitations")

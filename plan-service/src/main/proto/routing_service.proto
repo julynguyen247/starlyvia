@@ -33,6 +33,16 @@ message RouteCoordinate {
   double longitude = 2;
 }
 
+message RouteStep {
+  int32 instruction_type = 1;
+  string instruction = 2;
+  string road_name = 3;
+  int64 distance_meters = 4;
+  int64 duration_seconds = 5;
+  int32 geometry_start_index = 6;
+  int32 geometry_end_index = 7;
+}
+
 message RouteLeg {
   int32 from_stop_index = 1;
   int32 to_stop_index = 2;
@@ -40,6 +50,7 @@ message RouteLeg {
   string to_stop_id = 4;
   int64 distance_meters = 5;
   int64 duration_seconds = 6;
+  repeated RouteStep steps = 7;
 }
 
 message ComputeRouteResponse {

@@ -1,5 +1,6 @@
 package org.example.routingservice.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 public record RouteLegResponse(
@@ -8,6 +9,7 @@ public record RouteLegResponse(
         UUID fromStopId,
         UUID toStopId,
         long distanceMeters,
-        long durationSeconds
+        long durationSeconds,
+        List<RouteStepResponse> steps
 ) {
 }

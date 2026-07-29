@@ -11,6 +11,7 @@ import org.example.planservice.grpc.routing.ComputeRouteRequest;
 import org.example.planservice.grpc.routing.RouteCalculatorServiceGrpc;
 import org.example.planservice.grpc.routing.RouteCoordinate;
 import org.example.planservice.grpc.routing.RouteLeg;
+import org.example.planservice.grpc.routing.RouteStep;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,15 @@ class GrpcRoutingClientTests {
                                                 .setToStopId(request.getStops(1).getStopId())
                                                 .setDistanceMeters(1521)
                                                 .setDurationSeconds(420)
+                                                .addSteps(RouteStep.newBuilder()
+                                                        .setInstructionType(11)
+                                                        .setInstruction("Head northeast on Test Street")
+                                                        .setRoadName("Test Street")
+                                                        .setDistanceMeters(1521)
+                                                        .setDurationSeconds(420)
+                                                        .setGeometryStartIndex(0)
+                                                        .setGeometryEndIndex(1)
+                                                        .build())
                                                 .build())
                                         .build();
                         observer.onNext(response);
@@ -98,6 +108,11 @@ class GrpcRoutingClientTests {
         assertThat(response.legs()).singleElement().satisfies(leg -> {
             assertThat(leg.fromStopId()).isEqualTo(firstStopId);
             assertThat(leg.toStopId()).isEqualTo(secondStopId);
+            assertThat(leg.steps()).singleElement().satisfies(step -> {
+                assertThat(step.instruction()).isEqualTo("Head northeast on Test Street");
+                assertThat(step.roadName()).isEqualTo("Test Street");
+                assertThat(step.geometryEndIndex()).isEqualTo(1);
+            });
         });
     }
 

@@ -7,6 +7,7 @@ import org.example.placeservice.dto.PlaceSuggestionResponse;
 import org.example.placeservice.provider.GeoapifyPlacesClient;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
+import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -49,6 +50,27 @@ public class PlaceService {
             Integer limit
     ) {
         return geoapifyPlacesClient.nearby(latitude, longitude, type, radiusMeters, limit);
+    }
+
+    @Cacheable(
+            cacheNames = "geoapify-nearby",
+            key = "@placeCacheKey.viewport(#west, #south, #east, #north, #type, #limit)"
+    )
+    public List<PlaceDetailsResponse> viewport(
+            Double west,
+            Double south,
+            Double east,
+            Double north,
+            String type,
+            Integer limit
+    ) {
+        if (west >= east || south >= north) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid viewport bounds");
+        }
+        if (!StringUtils.hasText(type)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Place category is required");
+        }
+        return geoapifyPlacesClient.viewport(west, south, east, north, type, limit);
     }
 
     @Cacheable(

@@ -10,5 +10,14 @@ public interface PlaceProviderClient {
 
     List<PlaceDetailsResponse> nearby(Double latitude, Double longitude, String type, Integer radiusMeters, Integer limit);
 
+    List<PlaceDetailsResponse> viewport(
+            Double west,
+            Double south,
+            Double east,
+            Double north,
+            String type,
+            Integer limit
+    );
+
     PlaceDetailsResponse details(String providerPlaceId);
 }

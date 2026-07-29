@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.planservice.dto.ComputeRouteResponse;
 import org.example.planservice.dto.RouteCoordinateResponse;
 import org.example.planservice.dto.RouteLegResponse;
+import org.example.planservice.dto.RouteStepResponse;
 import org.example.planservice.entity.PlanStop;
 import org.example.planservice.grpc.routing.ComputeRouteRequest;
 import org.example.planservice.grpc.routing.RouteCalculatorServiceGrpc;
@@ -88,7 +89,18 @@ public class GrpcRoutingClient implements RoutingClient {
                                 parseOptionalUuid(leg.getFromStopId()),
                                 parseOptionalUuid(leg.getToStopId()),
                                 leg.getDistanceMeters(),
-                                leg.getDurationSeconds()
+                                leg.getDurationSeconds(),
+                                leg.getStepsList().stream()
+                                        .map(step -> new RouteStepResponse(
+                                                step.getInstructionType(),
+                                                step.getInstruction(),
+                                                step.getRoadName(),
+                                                step.getDistanceMeters(),
+                                                step.getDurationSeconds(),
+                                                step.getGeometryStartIndex(),
+                                                step.getGeometryEndIndex()
+                                        ))
+                                        .toList()
                         ))
                         .toList()
         );

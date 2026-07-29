@@ -128,7 +128,7 @@ class GeoapifyPlacesClientTests {
 
         server.expect(requestTo(startsWith("https://places.test/v2/places?")))
                 .andExpect(method(HttpMethod.GET))
-                .andExpect(queryParam("categories", "accommodation,catering,commercial,entertainment,leisure,tourism"))
+                .andExpect(queryParam("categories", "accommodation,catering,commercial,education,healthcare,entertainment,leisure,tourism,service,religion,sport,public_transport,parking,rental,childcare"))
                 .andExpect(queryParam("filter", "circle:106.69,10.77,1200"))
                 .andExpect(queryParam("bias", "proximity:106.69,10.77"))
                 .andExpect(queryParam("limit", "3"))
@@ -142,7 +142,8 @@ class GeoapifyPlacesClientTests {
                                 "name": "Play Cafe",
                                 "formatted": "2 Lime Street",
                                 "lat": 10.771,
-                                "lon": 106.691
+                                "lon": 106.691,
+                                "categories": ["catering.cafe", "catering"]
                               },
                               "geometry": {"type": "Point", "coordinates": [106.691, 10.771]}
                             }
@@ -157,7 +158,128 @@ class GeoapifyPlacesClientTests {
             assertThat(place.name()).isEqualTo("Play Cafe");
             assertThat(place.latitude()).isEqualTo(10.771);
             assertThat(place.longitude()).isEqualTo(106.691);
+            assertThat(place.categories()).contains("catering.cafe");
         });
+        server.verify();
+    }
+
+    @Test
+    void mapsPlacesInsideAViewportWithAHighDensityLimit() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        GeoapifyPlacesClient client = new GeoapifyPlacesClient(builder.build(), properties("test-key"));
+
+        server.expect(requestTo(startsWith("https://places.test/v2/places?")))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(queryParam("categories", "commercial"))
+                .andExpect(queryParam("conditions", "named"))
+                .andExpect(queryParam("filter", "rect:106.68,10.79,106.72,10.75"))
+                .andExpect(queryParam("bias", "proximity:106.7,10.77"))
+                .andExpect(queryParam("limit", "100"))
+                .andExpect(queryParam("apiKey", "test-key"))
+                .andRespond(withSuccess("""
+                        {
+                          "type": "FeatureCollection",
+                          "features": [
+                            {
+                              "properties": {
+                                "place_id": "shop-1",
+                                "name": "Corner Shop",
+                                "formatted": "3 Market Street",
+                                "lat": 10.771,
+                                "lon": 106.701,
+                                "categories": ["commercial.convenience", "commercial"]
+                              }
+                            }
+                          ]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        List<PlaceDetailsResponse> result = client.viewport(
+                106.68,
+                10.75,
+                106.72,
+                10.79,
+                "commercial",
+                100
+        );
+
+        assertThat(result).singleElement().satisfies(place -> {
+            assertThat(place.name()).isEqualTo("Corner Shop");
+            assertThat(place.categories()).contains("commercial.convenience");
+        });
+        server.verify();
+    }
+
+    @Test
+    void splitsLargeCategoryRequestsAtTheProviderLimit() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        GeoapifyPlacesClient client = new GeoapifyPlacesClient(builder.build(), properties("test-key"));
+
+        server.expect(requestTo(startsWith("https://places.test/v2/places?")))
+                .andExpect(queryParam("categories", "catering.cafe"))
+                .andExpect(queryParam("filter", "rect:106.68,10.79,106.7,10.75"))
+                .andExpect(queryParam("limit", "500"))
+                .andRespond(withSuccess(placeResponse("cafe-west", "West Cafe", 106.69), MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(startsWith("https://places.test/v2/places?")))
+                .andExpect(queryParam("categories", "catering.cafe"))
+                .andExpect(queryParam("filter", "rect:106.7,10.79,106.72,10.75"))
+                .andExpect(queryParam("limit", "500"))
+                .andRespond(withSuccess(placeResponse("cafe-east", "East Cafe", 106.71), MediaType.APPLICATION_JSON));
+
+        List<PlaceDetailsResponse> result = client.viewport(
+                106.68,
+                10.75,
+                106.72,
+                10.79,
+                "catering.cafe",
+                1_000
+        );
+
+        assertThat(result).extracting(PlaceDetailsResponse::providerPlaceId)
+                .containsExactly("cafe-west", "cafe-east");
+        server.verify();
+    }
+
+    @Test
+    void balancesDefaultViewportPlacesAcrossCategoryGroups() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        GeoapifyPlacesClient client = new GeoapifyPlacesClient(builder.build(), properties("test-key"));
+        List<String> groups = List.of(
+                "catering",
+                "commercial",
+                "tourism,entertainment,leisure,sport,religion,accommodation",
+                "service,education,healthcare,public_transport,parking,rental,childcare"
+        );
+
+        for (int index = 0; index < groups.size(); index++) {
+            int placeNumber = index + 1;
+            server.expect(requestTo(startsWith("https://places.test/v2/places?")))
+                    .andExpect(queryParam("categories", groups.get(index)))
+                    .andExpect(queryParam("conditions", "named"))
+                    .andExpect(queryParam("limit", "2"))
+                    .andRespond(withSuccess("""
+                            {
+                              "features": [{
+                                "properties": {
+                                  "place_id": "place-%d",
+                                  "name": "Place %d",
+                                  "lat": 10.77,
+                                  "lon": 106.69,
+                                  "categories": ["%s"]
+                                }
+                              }]
+                            }
+                            """.formatted(placeNumber, placeNumber, groups.get(index).split(",")[0]), MediaType.APPLICATION_JSON));
+        }
+
+        List<PlaceDetailsResponse> result = client.viewport(106.68, 10.75, 106.72, 10.79, null, 8);
+
+        assertThat(result).extracting(PlaceDetailsResponse::providerPlaceId)
+                .containsExactly("place-1", "place-2", "place-3", "place-4");
         server.verify();
     }
 
@@ -168,6 +290,23 @@ class GeoapifyPlacesClientTests {
         assertThatThrownBy(() -> client.autocomplete("museum", null, null, null, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Geoapify API key is not configured");
+    }
+
+    private String placeResponse(String placeId, String name, double longitude) {
+        return """
+                {
+                  "features": [{
+                    "properties": {
+                      "place_id": "%s",
+                      "name": "%s",
+                      "formatted": "Test address",
+                      "lat": 10.77,
+                      "lon": %s,
+                      "categories": ["catering.cafe"]
+                    }
+                  }]
+                }
+                """.formatted(placeId, name, longitude);
     }
 
     @Test

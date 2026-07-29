@@ -16,13 +16,24 @@ import tools.jackson.databind.JsonNode;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class GeoapifyPlacesClient implements PlaceProviderClient {
     private static final int DEFAULT_LIMIT = 8;
+    private static final int DEFAULT_VIEWPORT_LIMIT = 80;
+    private static final int MAX_PROVIDER_VIEWPORT_LIMIT = 500;
+    private static final int MAX_VIEWPORT_LIMIT = 1_000;
     private static final int DEFAULT_RADIUS_METERS = 5_000;
+    private static final List<String> VIEWPORT_CATEGORY_GROUPS = List.of(
+            "catering",
+            "commercial",
+            "tourism,entertainment,leisure,sport,religion,accommodation",
+            "service,education,healthcare,public_transport,parking,rental,childcare"
+    );
     private final RestClient restClient;
     private final PlaceProviderProperties properties;
 
@@ -100,6 +111,50 @@ public class GeoapifyPlacesClient implements PlaceProviderClient {
     }
 
     @Override
+    public List<PlaceDetailsResponse> viewport(
+            Double west,
+            Double south,
+            Double east,
+            Double north,
+            String type,
+            Integer limit
+    ) {
+        assertConfigured();
+
+        double centerLongitude = (west + east) / 2;
+        double centerLatitude = (south + north) / 2;
+        int resultLimit = resolvedViewportLimit(limit);
+        List<String> categoryGroups = StringUtils.hasText(type)
+                ? List.of(type)
+                : VIEWPORT_CATEGORY_GROUPS;
+        int groupLimit = Math.max(1, (int) Math.ceil((double) resultLimit / categoryGroups.size()));
+        Map<String, PlaceDetailsResponse> places = new LinkedHashMap<>();
+
+        for (String categories : categoryGroups) {
+            int providerLimit = StringUtils.hasText(type)
+                    ? Math.min(resultLimit, MAX_PROVIDER_VIEWPORT_LIMIT)
+                    : Math.min(groupLimit, MAX_PROVIDER_VIEWPORT_LIMIT);
+            List<ViewportBounds> viewports = StringUtils.hasText(type) && resultLimit > MAX_PROVIDER_VIEWPORT_LIMIT
+                    ? splitViewport(west, south, east, north)
+                    : List.of(new ViewportBounds(west, south, east, north));
+
+            for (ViewportBounds viewport : viewports) {
+                UriComponentsBuilder uri = endpoint("/v2/places")
+                        .queryParam("categories", categories)
+                        .queryParam("conditions", "named")
+                        .queryParam("filter", "rect:" + viewport.west() + "," + viewport.north() + "," + viewport.east() + "," + viewport.south())
+                        .queryParam("bias", "proximity:" + centerLongitude + "," + centerLatitude)
+                        .queryParam("limit", providerLimit);
+                for (PlaceDetailsResponse place : mapPlaces(get(uri))) {
+                    places.putIfAbsent(place.providerPlaceId(), place);
+                }
+            }
+        }
+
+        return places.values().stream().limit(resultLimit).toList();
+    }
+
+    @Override
     public PlaceDetailsResponse details(String providerPlaceId) {
         assertConfigured();
 
@@ -127,8 +182,22 @@ public class GeoapifyPlacesClient implements PlaceProviderClient {
                 null,
                 null,
                 text(place, "website"),
-                text(place.path("contact"), "phone")
+                text(place.path("contact"), "phone"),
+                stringValues(place, "categories")
         );
+    }
+
+    private List<PlaceDetailsResponse> mapPlaces(JsonNode response) {
+        List<PlaceDetailsResponse> places = new ArrayList<>();
+        for (JsonNode feature : features(response)) {
+            JsonNode place = feature.path("properties");
+            String placeId = text(place, "place_id");
+            String name = firstText(place, "name", "address_line1");
+            if (StringUtils.hasText(placeId) && StringUtils.hasText(name)) {
+                places.add(toDetails(place, placeId));
+            }
+        }
+        return places;
     }
 
     private JsonNode get(UriComponentsBuilder uri) {
@@ -173,6 +242,24 @@ public class GeoapifyPlacesClient implements PlaceProviderClient {
         return Math.max(1, Math.min(limit, 10));
     }
 
+    private int resolvedViewportLimit(Integer limit) {
+        if (limit == null) {
+            return DEFAULT_VIEWPORT_LIMIT;
+        }
+        return Math.max(1, Math.min(limit, MAX_VIEWPORT_LIMIT));
+    }
+
+    private List<ViewportBounds> splitViewport(double west, double south, double east, double north) {
+        double middleLongitude = (west + east) / 2;
+        return List.of(
+                new ViewportBounds(west, south, middleLongitude, north),
+                new ViewportBounds(middleLongitude, south, east, north)
+        );
+    }
+
+    private record ViewportBounds(double west, double south, double east, double north) {
+    }
+
     private void assertConfigured() {
         if (!StringUtils.hasText(properties.getGeoapify().getApiKey())) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Geoapify API key is not configured");
@@ -197,5 +284,19 @@ public class GeoapifyPlacesClient implements PlaceProviderClient {
     private Double doubleValue(JsonNode node, String fieldName) {
         JsonNode value = node.path(fieldName);
         return value.isNumber() ? value.asDouble() : null;
+    }
+
+    private List<String> stringValues(JsonNode node, String fieldName) {
+        JsonNode values = node.path(fieldName);
+        if (!values.isArray()) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (JsonNode value : values) {
+            if (value.isString() && StringUtils.hasText(value.asText())) {
+                result.add(value.asText());
+            }
+        }
+        return List.copyOf(result);
     }
 }

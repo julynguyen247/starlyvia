@@ -34,11 +34,30 @@ public class PlaceCacheKey {
             Integer limit
     ) {
         return digest(
-                "nearby-v1",
+                "nearby-v2",
                 normalizedNumber(latitude),
                 normalizedNumber(longitude),
                 exactText(type),
                 normalizedInteger(radiusMeters),
+                normalizedInteger(limit)
+        );
+    }
+
+    public String viewport(
+            Double west,
+            Double south,
+            Double east,
+            Double north,
+            String type,
+            Integer limit
+    ) {
+        return digest(
+                "viewport-v6",
+                normalizedNumber(west),
+                normalizedNumber(south),
+                normalizedNumber(east),
+                normalizedNumber(north),
+                exactText(type),
                 normalizedInteger(limit)
         );
     }

@@ -7,6 +7,7 @@ import org.example.routingservice.dto.ComputeRouteRequest;
 import org.example.routingservice.dto.ComputeRouteResponse;
 import org.example.routingservice.dto.RouteCoordinateResponse;
 import org.example.routingservice.dto.RouteLegResponse;
+import org.example.routingservice.dto.RouteStepResponse;
 import org.example.routingservice.dto.RouteStopRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -61,7 +62,7 @@ public class OpenRouteServiceClient implements RoutingProvider {
                 .toList();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("coordinates", coordinates);
-        body.put("instructions", false);
+        body.put("instructions", true);
         return body;
     }
 
@@ -74,7 +75,11 @@ public class OpenRouteServiceClient implements RoutingProvider {
         JsonNode propertiesNode = feature.path("properties");
         JsonNode summary = propertiesNode.path("summary");
         List<RouteCoordinateResponse> geometry = parseGeometry(feature.path("geometry").path("coordinates"));
-        List<RouteLegResponse> legs = parseLegs(propertiesNode.path("segments"), request.stops());
+        List<RouteLegResponse> legs = parseLegs(
+                propertiesNode.path("segments"),
+                request.stops(),
+                geometry.size()
+        );
 
         return new ComputeRouteResponse(
                 PROVIDER_NAME,
@@ -105,7 +110,11 @@ public class OpenRouteServiceClient implements RoutingProvider {
         return List.copyOf(geometry);
     }
 
-    private List<RouteLegResponse> parseLegs(JsonNode segmentsNode, List<RouteStopRequest> stops) {
+    private List<RouteLegResponse> parseLegs(
+            JsonNode segmentsNode,
+            List<RouteStopRequest> stops,
+            int geometrySize
+    ) {
         if (!segmentsNode.isArray() || segmentsNode.size() != stops.size() - 1) {
             throw invalidProviderResponse();
         }
@@ -121,10 +130,42 @@ public class OpenRouteServiceClient implements RoutingProvider {
                     from.stopId(),
                     to.stopId(),
                     roundedNumber(segment, "distance"),
-                    roundedNumber(segment, "duration")
+                    roundedNumber(segment, "duration"),
+                    parseSteps(segment.path("steps"), geometrySize)
             ));
         }
         return List.copyOf(legs);
+    }
+
+    private List<RouteStepResponse> parseSteps(JsonNode stepsNode, int geometrySize) {
+        if (!stepsNode.isArray()) {
+            throw invalidProviderResponse();
+        }
+
+        List<RouteStepResponse> steps = new ArrayList<>();
+        for (JsonNode step : stepsNode) {
+            JsonNode wayPoints = step.path("way_points");
+            if (!wayPoints.isArray() || wayPoints.size() < 2
+                    || !wayPoints.path(0).isNumber() || !wayPoints.path(1).isNumber()) {
+                throw invalidProviderResponse();
+            }
+            int startIndex = wayPoints.path(0).asInt();
+            int endIndex = wayPoints.path(1).asInt();
+            if (startIndex < 0 || endIndex < startIndex || endIndex >= geometrySize) {
+                throw invalidProviderResponse();
+            }
+
+            steps.add(new RouteStepResponse(
+                    integerNumber(step, "type"),
+                    requiredText(step, "instruction"),
+                    optionalText(step, "name"),
+                    roundedNumber(step, "distance"),
+                    roundedNumber(step, "duration"),
+                    startIndex,
+                    endIndex
+            ));
+        }
+        return List.copyOf(steps);
     }
 
     private long roundedNumber(JsonNode node, String fieldName) {
@@ -133,6 +174,27 @@ public class OpenRouteServiceClient implements RoutingProvider {
             throw invalidProviderResponse();
         }
         return Math.round(value.asDouble());
+    }
+
+    private int integerNumber(JsonNode node, String fieldName) {
+        JsonNode value = node.path(fieldName);
+        if (!value.isIntegralNumber() || !value.canConvertToInt()) {
+            throw invalidProviderResponse();
+        }
+        return value.asInt();
+    }
+
+    private String requiredText(JsonNode node, String fieldName) {
+        JsonNode value = node.path(fieldName);
+        if (!value.isTextual() || !StringUtils.hasText(value.asText())) {
+            throw invalidProviderResponse();
+        }
+        return value.asText();
+    }
+
+    private String optionalText(JsonNode node, String fieldName) {
+        JsonNode value = node.path(fieldName);
+        return value.isTextual() ? value.asText() : "";
     }
 
     private ResponseStatusException mapProviderError(RestClientResponseException ex) {

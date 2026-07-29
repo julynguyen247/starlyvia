@@ -35,7 +35,8 @@ class PlaceRedisCacheSerializationTests {
                 null,
                 null,
                 "https://museum.test",
-                "0123456789"
+                "0123456789",
+                List.of("entertainment.museum")
         );
 
         JavaType suggestionListType = objectMapper.getTypeFactory()
