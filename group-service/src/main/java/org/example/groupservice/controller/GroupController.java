@@ -52,6 +52,15 @@ public class GroupController {
         return groupService.getMembers(currentUserId, groupId);
     }
 
+    @DeleteMapping("/{groupId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @RequestHeader("X-User-Id") UUID currentUserId,
+            @PathVariable UUID groupId
+    ) {
+        groupService.delete(currentUserId, groupId);
+    }
+
     @PostMapping("/{groupId}/join-code")
     public GroupJoinCodeResponse getOrCreateJoinCode(
             @RequestHeader("X-User-Id") UUID currentUserId,

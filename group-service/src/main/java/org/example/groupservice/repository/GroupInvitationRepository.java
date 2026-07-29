@@ -16,4 +16,6 @@ public interface GroupInvitationRepository extends JpaRepository<GroupInvitation
     Optional<GroupInvitation> findByGroupIdAndInviteeId(UUID groupId, UUID inviteeId);
 
     boolean existsByGroupIdAndInviteeIdAndStatus(UUID groupId, UUID inviteeId, GroupInvitationStatus status);
+
+    void deleteByGroupId(UUID groupId);
 }

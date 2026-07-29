@@ -75,6 +75,18 @@ public class GroupService {
     }
 
     @Transactional
+    public void delete(UUID currentUserId, UUID groupId) {
+        PlanGroup group = findGroup(groupId);
+        assertOwner(groupId, currentUserId);
+
+        groupJoinCodeRepository.deleteByGroupId(groupId);
+        groupInvitationRepository.deleteByGroupId(groupId);
+        groupMemberRepository.deleteByGroupId(groupId);
+        planGroupRepository.delete(group);
+        publishGroupEvent("group.deleted", groupId, currentUserId, currentUserId);
+    }
+
+    @Transactional
     public GroupJoinCodeResponse getOrCreateJoinCode(UUID currentUserId, UUID groupId) {
         PlanGroup group = findGroup(groupId);
         assertAdmin(groupId, currentUserId);
@@ -271,6 +283,14 @@ public class GroupService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a group member"));
         if (member.getRole() != GroupRole.OWNER && member.getRole() != GroupRole.ADMIN) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only group owners or admins can do this");
+        }
+    }
+
+    private void assertOwner(UUID groupId, UUID userId) {
+        GroupMember member = groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a group member"));
+        if (member.getRole() != GroupRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the group owner can delete this group");
         }
     }
 

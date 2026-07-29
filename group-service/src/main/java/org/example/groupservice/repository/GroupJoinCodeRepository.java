@@ -10,4 +10,6 @@ public interface GroupJoinCodeRepository extends JpaRepository<GroupJoinCode, UU
     Optional<GroupJoinCode> findByGroupId(UUID groupId);
 
     Optional<GroupJoinCode> findByToken(UUID token);
+
+    void deleteByGroupId(UUID groupId);
 }

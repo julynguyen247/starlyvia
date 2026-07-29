@@ -193,6 +193,35 @@ class GroupServiceApplicationTests {
     }
 
     @Test
+    void ownerCanDeleteGroupAndOwnedRecords() {
+        UUID ownerId = UUID.randomUUID();
+        UUID inviteeId = UUID.randomUUID();
+        PlanGroup group = groupService.create(ownerId, createGroupRequest("Last Adventure", GroupType.FRIENDS));
+        groupService.invite(ownerId, group.getId(), inviteeId);
+        GroupJoinCodeResponse joinCode = groupService.getOrCreateJoinCode(ownerId, group.getId());
+
+        groupService.delete(ownerId, group.getId());
+
+        assertThat(planGroupRepository.findById(group.getId())).isEmpty();
+        assertThat(groupMemberRepository.findByGroupId(group.getId())).isEmpty();
+        assertThat(groupInvitationRepository.findByGroupIdAndInviteeId(group.getId(), inviteeId)).isEmpty();
+        assertThat(groupJoinCodeRepository.findByToken(joinCode.token())).isEmpty();
+    }
+
+    @Test
+    void nonOwnerCannotDeleteGroup() {
+        UUID ownerId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        PlanGroup group = groupService.create(ownerId, createGroupRequest("Shared Adventure", GroupType.FRIENDS));
+        GroupInvitation invitation = groupService.invite(ownerId, group.getId(), memberId);
+        groupService.acceptInvitation(memberId, invitation.getId());
+
+        assertThatThrownBy(() -> groupService.delete(memberId, group.getId()))
+                .hasMessageContaining("Only the group owner can delete this group");
+        assertThat(planGroupRepository.findById(group.getId())).isPresent();
+    }
+
+    @Test
     void cannotInviteMissingUser() {
         UserClient missingUserClient = userId -> false;
         DomainEventPublisher eventPublisher = (topic, key, payload) -> {
