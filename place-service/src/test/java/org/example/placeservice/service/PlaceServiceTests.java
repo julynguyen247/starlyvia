@@ -6,6 +6,8 @@ import org.example.placeservice.provider.GeoapifyPlacesClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -48,7 +50,8 @@ class PlaceServiceTests {
                 null,
                 null,
                 null,
-                null
+                null,
+                List.of()
         );
         when(geoapifyPlacesClient.details("place-1")).thenReturn(details);
 
@@ -63,6 +66,15 @@ class PlaceServiceTests {
         assertThatThrownBy(() -> placeService.details(PlaceProvider.GOOGLE, "place-1"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Unsupported place provider");
+
+        verifyNoInteractions(geoapifyPlacesClient);
+    }
+
+    @Test
+    void rejectsAnInvertedViewport() {
+        assertThatThrownBy(() -> placeService.viewport(106.8, 10.7, 106.7, 10.8, null, 80))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Invalid viewport bounds");
 
         verifyNoInteractions(geoapifyPlacesClient);
     }

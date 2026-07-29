@@ -52,6 +52,24 @@ public class PlaceService {
     }
 
     @Cacheable(
+            cacheNames = "geoapify-nearby",
+            key = "@placeCacheKey.viewport(#west, #south, #east, #north, #type, #limit)"
+    )
+    public List<PlaceDetailsResponse> viewport(
+            Double west,
+            Double south,
+            Double east,
+            Double north,
+            String type,
+            Integer limit
+    ) {
+        if (west >= east || south >= north) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid viewport bounds");
+        }
+        return geoapifyPlacesClient.viewport(west, south, east, north, type, limit);
+    }
+
+    @Cacheable(
             cacheNames = "geoapify-place-details",
             key = "@placeCacheKey.details(#provider, #providerPlaceId)"
     )

@@ -23,6 +23,6 @@ public class PlaceProviderProperties {
         @NotBlank
         private String baseUrl = "https://api.geoapify.com";
         @NotBlank
-        private String nearbyCategories = "accommodation,catering,commercial,entertainment,leisure,tourism";
+        private String nearbyCategories = "accommodation,catering,commercial,education,healthcare,entertainment,leisure,tourism,service,religion,sport,public_transport,parking,rental,childcare";
     }
 }

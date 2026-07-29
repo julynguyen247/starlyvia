@@ -18,6 +18,8 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.test.context.ContextConfiguration;
+
+import java.util.List;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import tools.jackson.databind.ObjectMapper;
@@ -55,7 +57,8 @@ class PlaceRedisCacheFailureTests {
                 null,
                 null,
                 null,
-                null
+                null,
+                List.of()
         );
         when(geoapifyPlacesClient.details("place-1")).thenReturn(details);
 
